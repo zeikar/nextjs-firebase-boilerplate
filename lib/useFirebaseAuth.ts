@@ -5,114 +5,95 @@ import {
   signInWithPopup,
   signOut as firebaseSignOut,
   signInAnonymously as firebaseSignInAnonymously,
+  UserCredential,
 } from "firebase/auth";
 import { auth, googleProvider } from "./firebase";
 import { useRouter } from "next/navigation";
+import { AuthResult, sendTokenToServer, deleteSession } from "./authService";
 
-interface AuthResult {
-  success: boolean;
-  error?: string;
-}
+/**
+ * Auth provider types for loading state management
+ */
+export type AuthProvider = "google" | "anonymous" | "signout" | null;
 
 export function useFirebaseAuth() {
   const router = useRouter();
-  const [authLoading, setAuthLoading] = useState(false);
+  const [loadingProvider, setLoadingProvider] = useState<AuthProvider>(null);
 
-  // Google sign in
+  /**
+   * Handles the common authentication flow with the server
+   */
+  const processServerAuth = async (
+    credentialPromise: Promise<UserCredential>,
+    operation: string,
+    provider: AuthProvider
+  ): Promise<AuthResult> => {
+    try {
+      setLoadingProvider(provider);
+      // Process user authentication
+      const result = await credentialPromise;
+      // Get Firebase ID token
+      const idToken = await result.user.getIdToken();
+
+      // Send ID token to server to set session cookie
+      const authResult = await sendTokenToServer(idToken);
+
+      if (authResult.success) {
+        router.refresh();
+      }
+
+      return authResult;
+    } catch (error: any) {
+      console.error(`${operation} error:`, error);
+      return {
+        success: false,
+        error: error.message || `An error occurred during ${operation}.`,
+      };
+    } finally {
+      setLoadingProvider(null);
+    }
+  };
+
+  /**
+   * Sign in with Google
+   */
   const signInWithGoogle = async (): Promise<AuthResult> => {
-    try {
-      setAuthLoading(true);
-      // Sign in with Google using popup method
-      const result = await signInWithPopup(auth, googleProvider);
-      // Get Firebase ID token
-      const idToken = await result.user.getIdToken();
-
-      // Send ID token to server to set session cookie
-      const response = await fetch("/api/auth/firebase", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ idToken }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Server authentication failed.");
-      }
-
-      router.refresh();
-      return { success: true };
-    } catch (error: any) {
-      console.error("Google sign in error:", error);
-      return {
-        success: false,
-        error: error.message || "An error occurred during sign in.",
-      };
-    } finally {
-      setAuthLoading(false);
-    }
+    return processServerAuth(
+      signInWithPopup(auth, googleProvider),
+      "Google sign in",
+      "google"
+    );
   };
 
-  // Anonymous sign in
+  /**
+   * Sign in anonymously
+   */
   const signInAnonymously = async (): Promise<AuthResult> => {
-    try {
-      setAuthLoading(true);
-      // Sign in anonymously with Firebase
-      const result = await firebaseSignInAnonymously(auth);
-      // Get Firebase ID token
-      const idToken = await result.user.getIdToken();
-
-      // Send ID token to server to set session cookie
-      const response = await fetch("/api/auth/firebase", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ idToken }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Server authentication failed.");
-      }
-
-      router.refresh();
-      return { success: true };
-    } catch (error: any) {
-      console.error("Anonymous sign in error:", error);
-      return {
-        success: false,
-        error: error.message || "An error occurred during sign in.",
-      };
-    } finally {
-      setAuthLoading(false);
-    }
+    return processServerAuth(
+      firebaseSignInAnonymously(auth),
+      "Anonymous sign in",
+      "anonymous"
+    );
   };
 
-  // Sign out
+  /**
+   * Sign out user
+   */
   const signOut = async (): Promise<AuthResult> => {
     try {
-      setAuthLoading(true);
+      setLoadingProvider("signout");
 
-      // Firebase client sign out
+      // Sign out from Firebase client
       await firebaseSignOut(auth);
 
       // Delete server session
-      const response = await fetch("/api/auth/firebase", {
-        method: "DELETE",
-      });
+      const sessionResult = await deleteSession();
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Failed to process sign out.");
+      if (sessionResult.success) {
+        router.refresh();
       }
 
-      router.refresh();
-      return { success: true };
+      return sessionResult;
     } catch (error: any) {
       console.error("Sign out error:", error);
       return {
@@ -120,12 +101,13 @@ export function useFirebaseAuth() {
         error: error.message || "An error occurred during sign out.",
       };
     } finally {
-      setAuthLoading(false);
+      setLoadingProvider(null);
     }
   };
 
   return {
-    loading: authLoading,
+    loadingProvider,
+    isAuthLoading: loadingProvider !== null,
     signInWithGoogle,
     signInAnonymously,
     signOut,
