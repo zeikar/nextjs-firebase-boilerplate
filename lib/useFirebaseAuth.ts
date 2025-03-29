@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   signInWithPopup,
   signOut as firebaseSignOut,
+  signInAnonymously as firebaseSignInAnonymously,
 } from "firebase/auth";
 import { auth, googleProvider } from "./firebase";
 import { useRouter } from "next/navigation";
@@ -54,6 +55,43 @@ export function useFirebaseAuth() {
     }
   };
 
+  // Anonymous sign in
+  const signInAnonymously = async (): Promise<AuthResult> => {
+    try {
+      setAuthLoading(true);
+      // Sign in anonymously with Firebase
+      const result = await firebaseSignInAnonymously(auth);
+      // Get Firebase ID token
+      const idToken = await result.user.getIdToken();
+
+      // Send ID token to server to set session cookie
+      const response = await fetch("/api/auth/firebase", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ idToken }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Server authentication failed.");
+      }
+
+      router.refresh();
+      return { success: true };
+    } catch (error: any) {
+      console.error("Anonymous sign in error:", error);
+      return {
+        success: false,
+        error: error.message || "An error occurred during sign in.",
+      };
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   // Sign out
   const signOut = async (): Promise<AuthResult> => {
     try {
@@ -89,6 +127,7 @@ export function useFirebaseAuth() {
   return {
     loading: authLoading,
     signInWithGoogle,
+    signInAnonymously,
     signOut,
   };
 }
