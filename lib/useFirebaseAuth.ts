@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import {
+  signInWithPopup,
+  signOut as firebaseSignOut,
+} from "firebase/auth";
 import { auth, googleProvider } from "./firebase";
-import { useAuth } from "./AuthContext";
+import { useRouter } from "next/navigation";
 
 interface AuthResult {
   success: boolean;
@@ -11,7 +14,7 @@ interface AuthResult {
 }
 
 export function useFirebaseAuth() {
-  const { user, loading, signOut: authSignOut } = useAuth();
+  const router = useRouter();
   const [authLoading, setAuthLoading] = useState(false);
 
   // Google sign in
@@ -38,6 +41,7 @@ export function useFirebaseAuth() {
         throw new Error(data.error || "Server authentication failed.");
       }
 
+      router.refresh();
       return { success: true };
     } catch (error: any) {
       console.error("Google sign in error:", error);
@@ -56,7 +60,7 @@ export function useFirebaseAuth() {
       setAuthLoading(true);
 
       // Firebase client sign out
-      await authSignOut();
+      await firebaseSignOut(auth);
 
       // Delete server session
       const response = await fetch("/api/auth/firebase", {
@@ -69,6 +73,7 @@ export function useFirebaseAuth() {
         throw new Error(data.error || "Failed to process sign out.");
       }
 
+      router.refresh();
       return { success: true };
     } catch (error: any) {
       console.error("Sign out error:", error);
@@ -82,8 +87,7 @@ export function useFirebaseAuth() {
   };
 
   return {
-    user,
-    loading: loading || authLoading,
+    loading: authLoading,
     signInWithGoogle,
     signOut,
   };

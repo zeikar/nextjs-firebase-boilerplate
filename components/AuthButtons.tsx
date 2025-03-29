@@ -1,10 +1,16 @@
 "use client";
 
 import { useFirebaseAuth } from "@/lib/useFirebaseAuth";
+import { ServerUser } from "@/lib/auth-server";
+import Loading from "./Loading";
 
-export default function AuthButtons() {
-  const { user, loading, signInWithGoogle, signOut } = useFirebaseAuth();
-  const isAuthenticated = !!user;
+
+type AuthButtonsProps = {
+  user: ServerUser | null;
+};
+
+export default function AuthButtons({ user }: AuthButtonsProps) {
+  const { loading, signInWithGoogle, signOut } = useFirebaseAuth();
 
   const handleSignOut = async () => {
     await signOut();
@@ -14,28 +20,15 @@ export default function AuthButtons() {
     await signInWithGoogle();
   };
 
-  if (loading) {
-    return <p>Loading...</p>;
-  }
-
-  if (isAuthenticated) {
+  if (user) {
     return (
-      <>
-        <div className="flex flex-col items-center sm:items-start mb-4">
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            Welcome, {user?.displayName || "User"}!
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {user?.email}
-          </p>
-        </div>
-        <button
-          className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-red-600 text-white gap-2 hover:bg-red-700 font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-          onClick={handleSignOut}
-        >
-          Sign out
-        </button>
-      </>
+      <button
+        className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-red-600 text-white gap-2 hover:bg-red-700 font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
+        onClick={handleSignOut}
+        disabled={loading}
+      >
+        {loading ? <Loading size="small" color="white" /> : "Sign out"}
+      </button>
     );
   }
 
@@ -43,8 +36,9 @@ export default function AuthButtons() {
     <button
       className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
       onClick={handleSignIn}
+      disabled={loading}
     >
-      Sign in with Google
+      {loading ? <Loading size="small" color="white" /> : "Sign in with Google"}
     </button>
   );
 }
