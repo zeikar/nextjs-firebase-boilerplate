@@ -30,18 +30,19 @@ export default function AuthButtons({ user }: AuthButtonsProps) {
   if (user) {
     return (
       <button
-        className="rounded-lg border border-solid border-transparent transition-all duration-200 flex items-center justify-center bg-gradient-to-r from-red-500 to-red-600 text-white gap-2 hover:shadow-lg font-medium text-sm sm:text-base h-10 sm:h-12 px-5 sm:px-6 sm:w-auto"
+        className="rounded-lg bg-rose-100 text-rose-800 hover:bg-rose-200 px-5 py-2 text-sm font-medium transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-rose-300 focus:ring-opacity-50 disabled:opacity-70"
         onClick={handleSignOut}
         disabled={isAuthLoading}
       >
         {loadingProvider === "signout" ? (
-          <Loading size="small" color="white" />
+          <Loading size="small" color="red" />
         ) : (
-          <>
-            <ArrowRightEndOnRectangleIcon className="h-5 w-5" aria-hidden="true" />
-            <span>Sign Out</span>
-          </>
+          <ArrowRightEndOnRectangleIcon
+            className="h-4.5 w-4.5"
+            aria-hidden="true"
+          />
         )}
+        <span>Sign Out</span>
       </button>
     );
   }
@@ -49,7 +50,7 @@ export default function AuthButtons({ user }: AuthButtonsProps) {
   return (
     <>
       <button
-        className="rounded-lg border border-solid border-transparent transition-all duration-200 flex items-center justify-center bg-gradient-to-r from-blue-500 to-indigo-600 text-white gap-2 hover:shadow-lg hover:translate-y-[-2px] font-medium text-sm sm:text-base h-10 sm:h-12 px-5 sm:px-6 sm:w-auto"
+        className="rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 px-5 py-2 text-sm font-medium transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-opacity-50 disabled:opacity-70"
         onClick={handleOpenModal}
         disabled={isAuthLoading}
       >

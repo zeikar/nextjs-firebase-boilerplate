@@ -12,9 +12,11 @@ export interface AuthResult {
 /**
  * Sends the Firebase ID token to the server to set up session cookies
  */
-export const sendTokenToServer = async (idToken: string): Promise<AuthResult> => {
+export const sendTokenToServer = async (
+  idToken: string
+): Promise<AuthResult> => {
   try {
-    const response = await fetch("/api/auth/firebase", {
+    const response = await fetch("/api/auth/signin", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -43,8 +45,8 @@ export const sendTokenToServer = async (idToken: string): Promise<AuthResult> =>
  */
 export const deleteSession = async (): Promise<AuthResult> => {
   try {
-    const response = await fetch("/api/auth/firebase", {
-      method: "DELETE",
+    const response = await fetch("/api/auth/signout", {
+      method: "POST",
     });
 
     const data = await response.json();
@@ -59,6 +61,31 @@ export const deleteSession = async (): Promise<AuthResult> => {
     return {
       success: false,
       error: error.message || "An error occurred while signing out.",
+    };
+  }
+};
+
+/**
+ * Sends a request to delete the user account (both client and server)
+ */
+export const deleteUserAccount = async (): Promise<AuthResult> => {
+  try {
+    const response = await fetch("/api/auth/user", {
+      method: "DELETE",
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || "Failed to delete account.");
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Account deletion error:", error);
+    return {
+      success: false,
+      error: error.message || "An error occurred while deleting account.",
     };
   }
 };
