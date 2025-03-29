@@ -11,16 +11,29 @@ import {
 } from "firebase/auth";
 import { auth, googleProvider } from "./firebase";
 import { useRouter } from "next/navigation";
-import { AuthResult, sendTokenToServer, deleteSession, deleteUserAccount } from "./authService";
+import {
+  AuthResult,
+  sendTokenToServer,
+  deleteSession,
+  deleteUserAccount,
+} from "./authService";
+import { useFirebaseErrorHandler } from "./utils/useFirebaseErrorHandler";
 
 /**
  * Auth provider types for loading state management
  */
-export type AuthProvider = "google" | "anonymous" | "signout" | "link" | "delete" | null;
+export type AuthProvider =
+  | "google"
+  | "anonymous"
+  | "signout"
+  | "link"
+  | "delete"
+  | null;
 
 export function useFirebaseAuth() {
   const router = useRouter();
   const [loadingProvider, setLoadingProvider] = useState<AuthProvider>(null);
+  const { showFirebaseError, showSuccessMessage } = useFirebaseErrorHandler();
 
   /**
    * Handles the common authentication flow with the server
@@ -42,11 +55,13 @@ export function useFirebaseAuth() {
 
       if (authResult.success) {
         router.refresh();
+        showSuccessMessage("Successfully signed in.");
       }
 
       return authResult;
     } catch (error: any) {
       console.error(`${operation} error:`, error);
+      showFirebaseError(error, `An error occurred during ${operation}.`);
       return {
         success: false,
         error: error.message || `An error occurred during ${operation}.`,
@@ -93,11 +108,13 @@ export function useFirebaseAuth() {
 
       if (sessionResult.success) {
         router.refresh();
+        showSuccessMessage("Successfully signed out.");
       }
 
       return sessionResult;
     } catch (error: any) {
       console.error("Sign out error:", error);
+      showFirebaseError(error, "An error occurred while signing out.");
       return {
         success: false,
         error: error.message || "An error occurred during sign out.",
@@ -113,29 +130,31 @@ export function useFirebaseAuth() {
   const linkWithGoogle = async (): Promise<AuthResult> => {
     try {
       setLoadingProvider("link");
-      
+
       // Check if user is authenticated
       const currentUser = auth.currentUser;
       if (!currentUser) {
         throw new Error("No authenticated user found");
       }
-      
+
       // Link with Google account
       const result = await firebaseLinkWithPopup(currentUser, googleProvider);
-      
+
       // Get new ID token after linking
       const idToken = await result.user.getIdToken(true);
-      
+
       // Send new token to server to update session
       const authResult = await sendTokenToServer(idToken);
-      
+
       if (authResult.success) {
         router.refresh();
+        showSuccessMessage("Account successfully linked.");
       }
-      
+
       return authResult;
     } catch (error: any) {
       console.error("Account linking error:", error);
+      showFirebaseError(error, "An error occurred while linking account.");
       return {
         success: false,
         error: error.message || "An error occurred while upgrading account.",
@@ -144,7 +163,7 @@ export function useFirebaseAuth() {
       setLoadingProvider(null);
     }
   };
-  
+
   /**
    * Delete user account - both on client and server
    * Uses a two-step process:
@@ -154,15 +173,17 @@ export function useFirebaseAuth() {
   const deleteAccount = async (): Promise<AuthResult> => {
     try {
       setLoadingProvider("delete");
-      
+
       // First, call the server to delete the account
       // This ensures we have a valid session and deletes the user on the server
       const serverResult = await deleteUserAccount();
-      
+
       if (!serverResult.success) {
-        throw new Error(serverResult.error || "Failed to delete account on server");
+        throw new Error(
+          serverResult.error || "Failed to delete account on server"
+        );
       }
-      
+
       try {
         // Try to delete client-side user as well, if it exists
         // This might fail if server already deleted user, which is fine
@@ -174,13 +195,15 @@ export function useFirebaseAuth() {
         // Ignore client-side errors as server already deleted the account
         console.log("Client-side deletion not needed or failed:", clientError);
       }
-      
+
       // Refresh the page to reflect changes
       router.refresh();
-      
+      showSuccessMessage("Account successfully deleted.");
+
       return { success: true };
     } catch (error: any) {
       console.error("Account deletion error:", error);
+      showFirebaseError(error, "An error occurred while deleting account.");
       return {
         success: false,
         error: error.message || "An error occurred while deleting account.",

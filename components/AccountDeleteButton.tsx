@@ -8,16 +8,10 @@ export default function AccountDeleteButton() {
   const { loadingProvider, deleteAccount } = useFirebaseAuth();
 
   const handleDeleteAccount = async () => {
-    if (
-      confirm(
-        "Are you sure you want to delete your account? This action cannot be undone."
-      )
-    ) {
-      try {
-        await deleteAccount();
-      } catch (error) {
-        console.error("Error deleting account:", error);
-      }
+    try {
+      await deleteAccount();
+    } catch (error) {
+      console.error("Error deleting account:", error);
     }
   };
 
