@@ -119,10 +119,6 @@ export default function Home() {
               </li>
               <li className="flex items-center">
                 <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
-                Sign Out
-              </li>
-              <li className="flex items-center">
-                <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
                 Upgrade Account (Anonymous → Google)
               </li>
               <li className="flex items-center">
