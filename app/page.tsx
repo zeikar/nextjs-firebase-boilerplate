@@ -114,7 +114,7 @@ export default function Home() {
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-300">
               <li className="flex items-center">
                 <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
-                Server Side Auth
+                Server Side Authentication
               </li>
               <li className="flex items-center">
                 <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
@@ -136,11 +136,7 @@ export default function Home() {
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-300">
               <li className="flex items-center">
                 <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
-                Next.js 15 (Latest)
-              </li>
-              <li className="flex items-center">
-                <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
-                Next.js App Router
+                Next.js 15 (App Router)
               </li>
               <li className="flex items-center">
                 <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
@@ -161,6 +157,10 @@ export default function Home() {
               <li className="flex items-center">
                 <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
                 Responsive Design
+              </li>
+              <li className="flex items-center">
+                <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
+                Notification System
               </li>
             </ul>
           </div>
