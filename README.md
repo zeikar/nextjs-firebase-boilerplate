@@ -1,6 +1,6 @@
 # Next.js 15 + Firebase Boilerplate
 
-![Next.js + Firebase](https://dogimg.vercel.app/api/og?url=https://nextjs-firebase-starter.vercel.app/)
+![Next.js + Firebase](https://nextjs-firebase-starter.vercel.app/repository-open-graph-template.png)
 
 Production-ready Next.js 15 + Firebase boilerplate with built-in authentication, server-side rendering, and TypeScript support for rapid application development. Launch secure, scalable web applications in minutes, not days.
 
