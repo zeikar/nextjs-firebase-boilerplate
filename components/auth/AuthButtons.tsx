@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useFirebaseAuth } from "@/lib/useFirebaseAuth";
-import { ServerUser } from "@/lib/auth-server";
-import Loading from "./icons/Loading";
-import AuthModal from "./modals/AuthModal";
+import { useFirebaseAuth } from "@/lib/firebase/useFirebaseAuth";
+import { ServerUser } from "@/lib/firebase/auth-server";
+import Loading from "../icons/Loading";
+import AuthModal from "../modals/AuthModal";
 import { ArrowRightEndOnRectangleIcon } from "@heroicons/react/24/outline";
 
 type AuthButtonsProps = {

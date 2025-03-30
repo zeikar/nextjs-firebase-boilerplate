@@ -9,7 +9,7 @@ import {
   linkWithPopup as firebaseLinkWithPopup,
   deleteUser as firebaseDeleteUser,
 } from "firebase/auth";
-import { auth, googleProvider } from "./firebase";
+import { auth, googleProvider } from "./client";
 import { useRouter } from "next/navigation";
 import {
   AuthResult,
@@ -17,7 +17,7 @@ import {
   deleteSession,
   deleteUserAccount,
 } from "./authService";
-import { useFirebaseErrorHandler } from "./utils/useFirebaseErrorHandler";
+import { useFirebaseErrorHandler } from "../utils/useFirebaseErrorHandler";
 
 /**
  * Auth provider types for loading state management

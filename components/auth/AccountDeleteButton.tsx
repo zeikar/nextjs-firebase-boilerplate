@@ -1,8 +1,8 @@
 "use client";
 
 import { TrashIcon } from "@heroicons/react/24/outline";
-import Loading from "./icons/Loading";
-import { useFirebaseAuth } from "@/lib/useFirebaseAuth";
+import Loading from "../icons/Loading";
+import { useFirebaseAuth } from "@/lib/firebase/useFirebaseAuth";
 
 export default function AccountDeleteButton() {
   const { loadingProvider, deleteAccount } = useFirebaseAuth();

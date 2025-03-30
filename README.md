@@ -107,18 +107,31 @@ app/                  - Next.js App Router pages
       signout/        - Sign out functionality
       user/           - User data functionality
 components/           - Reusable UI components
-  AuthButtons.tsx     - Authentication-related buttons
-  ServerAuthInfo.tsx  - Server-side auth info component
-  AccountDeleteButton.tsx - Delete account button
-  AccountUpgradeButton.tsx - Upgrade anonymous account
-  modals/
-    AuthModal.tsx     - Authentication modal
+  auth/               - Authentication-related components
+    AccountDeleteButton.tsx 
+    AccountUpgradeButton.tsx
+    AuthButtons.tsx   
+    ServerAuthInfo.tsx 
+  common/             - Common UI components
+  icons/              - Icon components
+  layout/             - Layout components
+  modals/             - Modal components
+    AuthModal.tsx     
+  notifications/      - Notification components
+contexts/             - React contexts
+  notification-context.tsx
 lib/                  - Utility functions and services
-  auth-server.ts      - Server-side auth utilities
-  authService.ts      - Client-side auth service
-  firebase-admin.ts   - Firebase Admin SDK setup
-  firebase.ts         - Firebase client SDK setup
-  useFirebaseAuth.ts  - Custom hook for Firebase auth
+  firebase/           - Firebase related utilities
+    admin.ts          - Firebase Admin SDK setup
+    auth-server.ts    - Server-side auth utilities
+    authService.ts    - Client-side auth service
+    client.ts         - Firebase client SDK setup
+    useFirebaseAuth.ts - Custom hook for Firebase auth
+  utils/              - General utility functions
+    firebaseErrors.ts
+    useFirebaseErrorHandler.ts
+public/               - Static files
+types/                - TypeScript type definitions
 ```
 
 ## Deployment

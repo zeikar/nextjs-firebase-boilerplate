@@ -1,8 +1,11 @@
 import Image from "next/image";
-import { ServerAuthInfo } from "@/components/ServerAuthInfo";
+import { ServerAuthInfo } from "@/components/auth/ServerAuthInfo";
 import { Metadata } from "next";
 import { CheckCircleIcon } from "@heroicons/react/20/solid";
 import GitHubIcon from "@/components/icons/GitHubIcon";
+
+// Configure the page as dynamic to allow server-side cookies
+export const dynamic = "force-dynamic";
 
 // Add SEO metadata
 export const metadata: Metadata = {

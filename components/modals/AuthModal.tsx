@@ -3,7 +3,7 @@
 import { Fragment, useRef } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { useFirebaseAuth, AuthProvider } from "@/lib/useFirebaseAuth";
+import { useFirebaseAuth, AuthProvider } from "@/lib/firebase/useFirebaseAuth";
 import Loading from "../icons/Loading";
 import GoogleIcon from "../icons/GoogleIcon";
 import UserIcon from "../icons/UserIcon";

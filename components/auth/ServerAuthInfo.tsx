@@ -1,8 +1,8 @@
-import { getServerUser, ServerUser } from "@/lib/auth-server";
+import { getServerUser, ServerUser } from "@/lib/firebase/auth-server";
 import AuthButtons from "./AuthButtons";
 import AccountUpgradeButton from "./AccountUpgradeButton";
 import AccountDeleteButton from "./AccountDeleteButton";
-import UserIcon from "./icons/UserIcon";
+import UserIcon from "../icons/UserIcon";
 
 type ServerAuthInfoProps = {
   user: ServerUser | null;

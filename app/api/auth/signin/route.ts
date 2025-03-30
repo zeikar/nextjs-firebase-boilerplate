@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { adminAuth } from "@/lib/firebase-admin";
+import { adminAuth } from "@/lib/firebase/admin";
 
 // Firebase session cookie name
 const SESSION_COOKIE_NAME = "firebase-session";

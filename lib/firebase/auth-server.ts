@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { adminAuth } from "./firebase-admin";
+import { adminAuth } from "./admin";
 
 // Firebase session cookie name
 const SESSION_COOKIE_NAME = "firebase-session";
