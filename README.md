@@ -35,6 +35,32 @@ Production-ready Next.js 15 + Firebase boilerplate with built-in authentication,
 - Firebase account with a project created
 - Firebase Admin SDK credentials
 
+## Firebase Setup
+
+### Step 1: Create a Firebase Project
+
+1. Go to the [Firebase Console](https://console.firebase.google.com/)
+2. Click "Add project"
+3. Follow the setup instructions
+
+### Step 2: Enable Authentication
+
+1. In your Firebase project console, go to "Authentication"
+2. Click "Get started"
+3. Enable Google and Anonymous sign-in methods
+
+### Step 3: Generate Admin SDK Credentials
+
+1. In your Firebase project settings, go to "Service accounts"
+2. Click "Generate new private key"
+3. Save the JSON file and use its contents for the `FIREBASE_ADMIN_SERVICE_ACCOUNT` environment variable
+
+### Step 4: Get Web SDK Configuration
+
+1. In your Firebase project settings, go to "General"
+2. Under "Your apps", click the web app (create one if needed)
+3. Copy the Firebase configuration object for the `NEXT_PUBLIC_FIREBASE_WEB_SDK_CONFIG` environment variable
+
 ### Environment Variables
 
 You can set up environment variables in two ways:
@@ -63,7 +89,7 @@ NEXT_PUBLIC_FIREBASE_WEB_SDK_CONFIG={"apiKey":"YOUR_API_KEY","authDomain":"YOUR_
 
 > **IMPORTANT**: When setting up the `FIREBASE_ADMIN_SERVICE_ACCOUNT`, `NEXT_PUBLIC_FIREBASE_WEB_SDK_CONFIG` environment variable, you must remove all line breaks from the JSON. The entire JSON content should be on a single line. Especially in the `private_key` field, line breaks can cause authentication errors. Always compress the JSON into one line before adding it to your `.env.local` file.
 
-### Installation
+## Installation
 
 1. Clone the repository
 
@@ -97,32 +123,6 @@ bun dev
 ```
 
 4. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-## Firebase Setup
-
-### Step 1: Create a Firebase Project
-
-1. Go to the [Firebase Console](https://console.firebase.google.com/)
-2. Click "Add project"
-3. Follow the setup instructions
-
-### Step 2: Enable Authentication
-
-1. In your Firebase project console, go to "Authentication"
-2. Click "Get started"
-3. Enable Google and Anonymous sign-in methods
-
-### Step 3: Generate Admin SDK Credentials
-
-1. In your Firebase project settings, go to "Service accounts"
-2. Click "Generate new private key"
-3. Save the JSON file and use its contents for the `FIREBASE_ADMIN_SERVICE_ACCOUNT` environment variable
-
-### Step 4: Get Web SDK Configuration
-
-1. In your Firebase project settings, go to "General"
-2. Under "Your apps", click the web app (create one if needed)
-3. Copy the Firebase configuration object for the `NEXT_PUBLIC_FIREBASE_WEB_SDK_CONFIG` environment variable
 
 ## Project Structure
 
