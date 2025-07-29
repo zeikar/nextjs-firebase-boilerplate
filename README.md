@@ -37,6 +37,20 @@ Production-ready Next.js 15 + Firebase boilerplate with built-in authentication,
 
 ### Environment Variables
 
+You can set up environment variables in two ways:
+
+#### Option 1: Copy from example file (Recommended)
+
+Copy the provided example file:
+
+```bash
+cp .env.local.example .env.local
+```
+
+Then edit `.env.local` with your actual Firebase configuration values.
+
+#### Option 2: Create manually
+
 Create a `.env.local` file in the root directory with the following variables:
 
 ```
