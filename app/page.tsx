@@ -9,12 +9,12 @@ export const dynamic = "force-dynamic";
 
 // Add SEO metadata
 export const metadata: Metadata = {
-  title: "Next.js 15 + Firebase Boilerplate",
+  title: "Next.js 16 + Firebase Boilerplate",
   description:
-    "Production-ready Next.js 15 + Firebase boilerplate with built-in authentication, server-side rendering, and TypeScript support for rapid application development",
+    "Production-ready Next.js 16 + Firebase boilerplate with built-in authentication, server-side rendering, and TypeScript support for rapid application development",
   keywords: [
     "next.js",
-    "next.js 15",
+    "next.js 16",
     "firebase",
     "authentication",
     "boilerplate",
@@ -25,9 +25,9 @@ export const metadata: Metadata = {
     "developer-friendly",
   ],
   openGraph: {
-    title: "Next.js 15 + Firebase Boilerplate",
+    title: "Next.js 16 + Firebase Boilerplate",
     description:
-      "Production-ready Next.js 15 + Firebase boilerplate with built-in authentication",
+      "Production-ready Next.js 16 + Firebase boilerplate with built-in authentication",
     url: "https://nextjs-firebase-starter.vercel.app/",
     siteName: "Next.js Firebase Boilerplate",
     images: [
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
         url: "https://dogimg.vercel.app/api/og?url=https://nextjs-firebase-starter.vercel.app/",
         width: 1200,
         height: 630,
-        alt: "Next.js 15 + Firebase Boilerplate",
+        alt: "Next.js 16 + Firebase Boilerplate",
       },
     ],
     locale: "en_US",
@@ -43,9 +43,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Next.js 15 + Firebase Boilerplate",
+    title: "Next.js 16 + Firebase Boilerplate",
     description:
-      "Production-ready Next.js 15 + Firebase boilerplate with built-in authentication",
+      "Production-ready Next.js 16 + Firebase boilerplate with built-in authentication",
     images: [
       "https://dogimg.vercel.app/api/og?url=https://nextjs-firebase-starter.vercel.app/",
     ],
@@ -136,7 +136,7 @@ export default function Home() {
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-300">
               <li className="flex items-center">
                 <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
-                Next.js 15 (App Router)
+                Next.js 16 (App Router)
               </li>
               <li className="flex items-center">
                 <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />

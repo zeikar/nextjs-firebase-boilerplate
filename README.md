@@ -1,8 +1,8 @@
-# Next.js 15 + Firebase Boilerplate
+# Next.js 16 + Firebase Boilerplate
 
 ![Next.js + Firebase](https://nextjs-firebase-starter.vercel.app/repository-open-graph-template.png)
 
-Production-ready Next.js 15 + Firebase boilerplate with built-in authentication, server-side rendering, and TypeScript support for rapid application development. Launch secure, scalable web applications in minutes, not days.
+Production-ready Next.js 16 + Firebase boilerplate with built-in authentication, server-side rendering, and TypeScript support for rapid application development. Launch secure, scalable web applications in minutes, not days.
 
 ## Features
 
@@ -15,7 +15,7 @@ Production-ready Next.js 15 + Firebase boilerplate with built-in authentication,
 
 ### Technical Features
 
-- ✅ Next.js 15 (App Router)
+- ✅ Next.js 16 (App Router)
 - ✅ Firebase Authentication
 - ✅ TypeScript Support
 - ✅ Tailwind CSS Styling
