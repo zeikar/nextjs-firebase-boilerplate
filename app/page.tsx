@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 // Add SEO metadata
 export const metadata: Metadata = {
-  title: "Next.js 16 + Firebase Boilerplate",
+  title: { absolute: "Next.js 16 + Firebase Boilerplate" },
   description:
     "Production-ready Next.js 16 + Firebase boilerplate with built-in authentication, server-side rendering, and TypeScript support for rapid application development",
   keywords: [
@@ -52,9 +52,46 @@ export const metadata: Metadata = {
   },
 };
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://nextjs-firebase-starter.vercel.app/#website",
+      url: "https://nextjs-firebase-starter.vercel.app/",
+      name: "Next.js 16 + Firebase Boilerplate",
+      description:
+        "Production-ready Next.js 16 + Firebase boilerplate with built-in authentication, server-side rendering, and TypeScript support",
+    },
+    {
+      "@type": "SoftwareSourceCode",
+      name: "Next.js 16 + Firebase Boilerplate",
+      description:
+        "Production-ready Next.js 16 + Firebase boilerplate with built-in authentication, server-side rendering, and TypeScript support for rapid application development",
+      url: "https://github.com/zeikar/nextjs-firebase-boilerplate",
+      codeRepository: "https://github.com/zeikar/nextjs-firebase-boilerplate",
+      programmingLanguage: ["TypeScript", "JavaScript"],
+      runtimePlatform: "Node.js",
+      author: {
+        "@type": "Person",
+        name: "zeikar",
+        url: "https://github.com/zeikar",
+      },
+      license: "https://opensource.org/licenses/MIT",
+      keywords:
+        "Next.js, Firebase, Authentication, TypeScript, React, Boilerplate",
+    },
+  ],
+};
+
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 flex flex-col items-center justify-between py-12 px-4 sm:px-6">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 flex flex-col items-center justify-between py-12 px-4 sm:px-6">
       {/* Header */}
       <header className="w-full max-w-4xl text-center">
         <div className="flex flex-col items-center mb-8">
@@ -191,5 +228,6 @@ export default function Home() {
         </div>
       </footer>
     </div>
+    </>
   );
 }
