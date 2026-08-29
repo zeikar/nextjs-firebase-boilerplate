@@ -32,7 +32,7 @@ Production-ready Next.js 16 + Firebase boilerplate with built-in authentication,
 
 ### Prerequisites
 
-- Node.js 22.13 or later (firebase-admin 14 needs 22; the test tooling needs 22.13)
+- Node.js 24 or later (`engines` asks for `>=24.0.0`, so Vercel deploys on 24.x). firebase-admin 14 pulls jwks-rsa, which requires jose from CommonJS, so anything below Node 20.19 / 22.12 fails to load the Admin SDK at all.
 - Firebase account with a project created
 - Firebase Admin SDK credentials
 
