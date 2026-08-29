@@ -17,11 +17,7 @@ export default function AccountDeleteButton() {
       return;
     }
 
-    try {
-      await deleteAccount();
-    } catch (error) {
-      console.error("Error deleting account:", error);
-    }
+    await deleteAccount();
   };
 
   const isDeleting = loadingProvider === "delete";

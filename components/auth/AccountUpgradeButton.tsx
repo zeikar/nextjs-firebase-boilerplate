@@ -8,11 +8,7 @@ export default function AccountUpgradeButton() {
   const { loadingProvider, isAuthLoading, linkWithGoogle } = useAuth();
 
   const handleUpgradeAccount = async () => {
-    try {
-      await linkWithGoogle();
-    } catch (error) {
-      console.error("Error upgrading account:", error);
-    }
+    await linkWithGoogle();
   };
 
   const isLoading = loadingProvider === "link";

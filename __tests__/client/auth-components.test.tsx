@@ -249,31 +249,6 @@ describe("loading indicators", () => {
   });
 });
 
-describe("when an auth action rejects", () => {
-  it("AccountDeleteButton reports it instead of crashing", async () => {
-    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-    auth.deleteAccount.mockRejectedValue(new Error("boom"));
-    render(<AccountDeleteButton />);
-
-    await userEvent.click(screen.getByRole("button"));
-
-    await waitFor(() => expect(logged).toHaveBeenCalled());
-    expect(screen.getByRole("button")).toBeInTheDocument();
-  });
-
-  it("AccountUpgradeButton reports it instead of crashing", async () => {
-    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
-    auth.linkWithGoogle.mockRejectedValue(new Error("boom"));
-    render(<AccountUpgradeButton />);
-
-    await userEvent.click(screen.getByRole("button"));
-
-    await waitFor(() => expect(logged).toHaveBeenCalled());
-    expect(screen.getByRole("button")).toBeInTheDocument();
-  });
-});
-
 describe("the sign-in modal's lifecycle", () => {
   it("closes again from inside the modal", async () => {
     render(<AuthButtons user={null} />);

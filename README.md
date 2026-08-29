@@ -32,7 +32,7 @@ Production-ready Next.js 16 + Firebase boilerplate with built-in authentication,
 
 ### Prerequisites
 
-- Node.js 22 or later (required by firebase-admin 14)
+- Node.js 22.13 or later (firebase-admin 14 needs 22; the test tooling needs 22.13)
 - Firebase account with a project created
 - Firebase Admin SDK credentials
 
