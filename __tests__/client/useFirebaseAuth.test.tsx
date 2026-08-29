@@ -445,6 +445,61 @@ describe("deleteAccount", () => {
     );
   });
 
+  it("does not claim the session ended when the server session deletion fails", async () => {
+    // deleteSession() resolves { success: false } rather than rejecting, so the
+    // warning must not tell the user the session was ended when it was not.
+    const user = userWith({ isAnonymous: true });
+    client.auth.currentUser = user;
+    authService.deleteUserAccount.mockResolvedValue({
+      success: false,
+      outcomeUnknown: true,
+      error: "An error occurred while deleting account.",
+    });
+    authService.deleteSession.mockResolvedValue({
+      success: false,
+      error: "An error occurred while signing out.",
+    });
+    const { result } = renderHook(() => useFirebaseAuth());
+
+    await act(async () => {
+      await result.current.deleteAccount();
+    });
+
+    expect(authService.deleteSession).toHaveBeenCalled();
+    expect(router.refresh).toHaveBeenCalled();
+    expect(notify.showWarningMessage).toHaveBeenCalledWith(
+      "The deletion could not be confirmed, and the sign-out did not fully complete, so the session may still be active."
+    );
+  });
+
+  it("does not claim the session ended when the client sign-out rejects", async () => {
+    // The server cookie is gone, but a rejected client sign-out can leave the
+    // Firebase SDK still holding the user, so the warning must not claim the
+    // session ended.
+    const user = userWith({ isAnonymous: true });
+    client.auth.currentUser = user;
+    authService.deleteUserAccount.mockResolvedValue({
+      success: false,
+      outcomeUnknown: true,
+      error: "An error occurred while deleting account.",
+    });
+    authService.deleteSession.mockResolvedValue({ success: true });
+    firebaseAuth.signOut.mockRejectedValue({
+      code: "auth/network-request-failed",
+    });
+    const { result } = renderHook(() => useFirebaseAuth());
+
+    await act(async () => {
+      await result.current.deleteAccount();
+    });
+
+    expect(authService.deleteSession).toHaveBeenCalled();
+    expect(router.refresh).toHaveBeenCalled();
+    expect(notify.showWarningMessage).toHaveBeenCalledWith(
+      "The deletion could not be confirmed, and the sign-out did not fully complete, so the session may still be active."
+    );
+  });
+
   it("stops when re-authentication fails", async () => {
     client.auth.currentUser = userWith();
     firebaseAuth.reauthenticateWithPopup.mockRejectedValue({

@@ -258,23 +258,37 @@ export function useFirebaseAuth() {
         // one, `GET /api/auth/user`, is called by nothing in this app. Signing
         // out is the recoverable direction - if the account survived the user
         // signs in again, and if it did not the browser is already correct.
-        const [clientOutcome] = await Promise.allSettled([
+        const [clientOutcome, sessionOutcome] = await Promise.allSettled([
           firebaseSignOut(auth),
           deleteSession(),
         ]);
 
         if (clientOutcome.status === "rejected") {
-          // `deleteSession()` cannot reject, so the server cookie is gone
-          // either way; only this browser's own SDK state may be left over.
+          // Logged here; its effect on the user-facing warning is folded into
+          // `sessionEnded` below rather than shown directly.
           console.error(
             "Account deletion sign out error:",
             clientOutcome.reason
           );
         }
 
+        // "Ended" requires both halves: the server session actually cleared
+        // AND the client SDK's own sign-out succeeded, or either side alone can
+        // leave this browser looking signed in. `deleteSession()` never
+        // rejects - it resolves `{ success: false }` on failure - so a rejected
+        // settle there is unreachable in practice, but `firebaseSignOut()`
+        // rejecting is real. Either half failing means the sign-out did not
+        // fully complete, so the warning stays neutral about which one did.
+        const sessionEnded =
+          sessionOutcome.status === "fulfilled" &&
+          sessionOutcome.value.success &&
+          clientOutcome.status === "fulfilled";
+
         router.refresh();
         showWarningMessage(
-          "The deletion could not be confirmed, so the session was ended as a precaution."
+          sessionEnded
+            ? "The deletion could not be confirmed, so the session was ended as a precaution."
+            : "The deletion could not be confirmed, and the sign-out did not fully complete, so the session may still be active."
         );
 
         return serverResult;
