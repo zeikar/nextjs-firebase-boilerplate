@@ -1,9 +1,16 @@
 // Fails the build if this module is ever pulled into a client bundle
 import "server-only";
-import admin from "firebase-admin";
+import {
+  cert,
+  getApp,
+  getApps,
+  initializeApp,
+  type ServiceAccount,
+} from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 
 // Firebase Service Account (for server-side)
-function loadServiceAccount(): admin.ServiceAccount {
+function loadServiceAccount(): ServiceAccount {
   const serviceAccount = process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT;
 
   if (!serviceAccount) {
@@ -24,10 +31,10 @@ function loadServiceAccount(): admin.ServiceAccount {
 
 // Initialize Admin SDK, reusing the app that survives a hot reload
 const adminApp =
-  admin.apps.length > 0
-    ? admin.app()
-    : admin.initializeApp({
-        credential: admin.credential.cert(loadServiceAccount()),
+  getApps().length > 0
+    ? getApp()
+    : initializeApp({
+        credential: cert(loadServiceAccount()),
       });
 
-export const adminAuth = admin.auth(adminApp);
+export const adminAuth = getAuth(adminApp);

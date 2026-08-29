@@ -32,7 +32,7 @@ Production-ready Next.js 16 + Firebase boilerplate with built-in authentication,
 
 ### Prerequisites
 
-- Node.js 20.9.0 or later (required by Next.js 16)
+- Node.js 22 or later (required by firebase-admin 14)
 - Firebase account with a project created
 - Firebase Admin SDK credentials
 
