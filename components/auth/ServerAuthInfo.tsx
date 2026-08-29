@@ -8,21 +8,23 @@ type ServerAuthInfoProps = {
   user: ServerUser | null;
 };
 
-// Client component that receives server data
+// Presentational part, rendered with the data the server resolved
 function AuthContent({ user }: ServerAuthInfoProps) {
-  // Check if user is anonymous (no email typically means anonymous user)
-  const isAnonymousUser = user?.email === "";
-
   if (user) {
     return (
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 p-4 rounded-xl bg-white dark:bg-gray-800 shadow-md border border-gray-100 dark:border-gray-700 transition-all duration-300">
         {/* User Image - with improved styling */}
         <div className="relative h-16 w-16 rounded-full overflow-hidden bg-gradient-to-br from-gray-50 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center border-2 border-indigo-100 dark:border-indigo-900 shadow-inner">
           {user.photoURL ? (
+            // A plain <img>: the avatar host depends on the sign-in providers
+            // the project enables, so it cannot be pinned in next.config.ts.
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={user.photoURL}
               alt={user.displayName || "User profile"}
               className="h-full w-full object-cover"
+              // Google refuses avatar requests that carry a referrer
+              referrerPolicy="no-referrer"
             />
           ) : (
             <UserIcon className="h-8 w-8 text-indigo-400 dark:text-indigo-300" />
@@ -37,7 +39,7 @@ function AuthContent({ user }: ServerAuthInfoProps) {
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {user.email || `Anonymous User (${user.uid.substring(0, 6)})`}
-              {isAnonymousUser && (
+              {user.isAnonymous && (
                 <span className="ml-2 px-2 py-0.5 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 text-xs rounded-full">
                   Temporary
                 </span>
@@ -47,7 +49,7 @@ function AuthContent({ user }: ServerAuthInfoProps) {
 
           <div className="flex flex-wrap justify-center sm:justify-start gap-2 w-full">
             {/* Show upgrade button for anonymous users */}
-            {isAnonymousUser && <AccountUpgradeButton />}
+            {user.isAnonymous && <AccountUpgradeButton />}
 
             {/* Other buttons */}
             <AuthButtons user={user} />

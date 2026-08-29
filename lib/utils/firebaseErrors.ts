@@ -37,36 +37,75 @@ const authErrorMessages: FirebaseErrorCodeMap = {
 };
 
 /**
+ * Read the `message` of anything that was thrown, if it has one
+ */
+export const getErrorMessage = (
+  error: unknown,
+  fallback: string
+): string => {
+  const message = (error as { message?: unknown } | null)?.message;
+
+  return typeof message === 'string' && message ? message : fallback;
+};
+
+/**
  * Extract Firebase error code from error object
  */
-const getFirebaseErrorCode = (error: any): string | null => {
-  if (!error) return null;
-  
+const getFirebaseErrorCode = (error: unknown): string | null => {
+  if (!error || typeof error !== 'object') return null;
+
+  const { code, message } = error as { code?: unknown; message?: unknown };
+
   // Direct Firebase error format (contains code property)
-  if (error.code) return error.code;
-  
+  if (typeof code === 'string') return code;
+
   // Error message might contain the code
-  if (error.message && typeof error.message === 'string') {
-    const match = error.message.match(/\(([^)]+)\)/);
+  if (typeof message === 'string') {
+    const match = message.match(/\(([^)]+)\)/);
     if (match && match[1]) return match[1];
   }
-  
+
   return null;
+};
+
+/**
+ * Firebase Admin error codes meaning the credential the caller presented was
+ * rejected. Codes like `auth/internal-error`, `auth/invalid-credential` or
+ * `auth/quota-exceeded` share the namespace but say the request never reached
+ * a verdict, so the namespace alone cannot be the test: only a real rejection
+ * may clear a session or count as "already signed out".
+ *
+ * `auth/argument-error` is deliberately absent. The Admin SDK also raises it
+ * when it cannot fetch Google's public keys, and telling that apart from a
+ * malformed token would mean matching on SDK message strings. An unverifiable
+ * token is therefore treated as a server failure - the safe direction, since
+ * the alternative is claiming a session was revoked when it was not.
+ */
+const rejectedCredentialCodes = new Set([
+  'auth/id-token-expired',
+  'auth/id-token-revoked',
+  'auth/invalid-id-token',
+  'auth/session-cookie-expired',
+  'auth/session-cookie-revoked',
+  'auth/user-disabled',
+  'auth/user-not-found',
+]);
+
+export const isRejectedCredentialError = (error: unknown): boolean => {
+  const code = getFirebaseErrorCode(error);
+  return code !== null && rejectedCredentialCodes.has(code);
 };
 
 /**
  * Get user-friendly message from Firebase error
  */
-export const getFirebaseErrorMessage = (error: any): string => {
+export const getFirebaseErrorMessage = (error: unknown): string => {
   const code = getFirebaseErrorCode(error);
-  
+
   if (code && authErrorMessages[code]) {
     return authErrorMessages[code];
   }
-  
-  // Generic error message as fallback
-  return error?.message || 'An unknown error occurred.';
-};
 
-// Export error code map for any external usage
-export const errorMessages = authErrorMessages;
+  // Generic error message as fallback
+  return getErrorMessage(error, 'An unknown error occurred.');
+};

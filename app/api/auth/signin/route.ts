@@ -1,14 +1,23 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebase/admin";
-
-// Firebase session cookie name
-const SESSION_COOKIE_NAME = "firebase-session";
-// Session expiration time (2 weeks)
-const SESSION_EXPIRES_IN = 60 * 60 * 24 * 14 * 1000;
+import { getSessionUid } from "@/lib/firebase/auth-server";
+import {
+  SESSION_COOKIE_NAME,
+  SESSION_EXPIRES_IN,
+  isRecent,
+} from "@/lib/firebase/session";
+import { rejectCrossSiteRequest } from "@/lib/utils/request-origin";
 
 // Sign In API handler
 export async function POST(request: NextRequest) {
+  // Login CSRF: without an origin check a cross-site form post can hand the
+  // victim a session cookie for an account the attacker controls.
+  const rejected = rejectCrossSiteRequest(request, true);
+  if (rejected) {
+    return rejected;
+  }
+
   try {
     // Extract ID token from request body
     const { idToken } = await request.json();
@@ -20,8 +29,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify ID token using Firebase Admin SDK
-    const decodedToken = await adminAuth.verifyIdToken(idToken);
+    // Verify ID token using Firebase Admin SDK, rejecting revoked tokens
+    const decodedToken = await adminAuth.verifyIdToken(idToken, true);
+
+    // A two week session must come from a sign-in that just happened, so a
+    // stolen ID token cannot be traded up for a long-lived session. Re-minting
+    // for a uid that already holds a valid session (the anonymous -> Google
+    // upgrade refreshes its cookie) grants no new access, so it is exempt.
+    if (
+      !isRecent(decodedToken.auth_time) &&
+      (await getSessionUid()) !== decodedToken.uid
+    ) {
+      return NextResponse.json(
+        { success: false, error: "Recent sign-in required." },
+        { status: 401 }
+      );
+    }
 
     // Create session cookie (valid for 2 weeks)
     const sessionCookie = await adminAuth.createSessionCookie(idToken, {
