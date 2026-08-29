@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Next.js 16 + Firebase Boilerplate",
     description:
-      "Next.js 16 + Firebase boilerplate with server-side authentication and per-user Firestore data",
+      "Next.js 16 + Firebase boilerplate with server-side authentication and per-user Firestore data, both reached through the Admin SDK",
     url: `${SITE_URL}/`,
     siteName: "Next.js Firebase Boilerplate",
     images: [
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Next.js 16 + Firebase Boilerplate",
     description:
-      "Next.js 16 + Firebase boilerplate with server-side authentication and per-user Firestore data",
+      "Next.js 16 + Firebase boilerplate with server-side authentication and per-user Firestore data, both reached through the Admin SDK",
     images: [SITE_OG_IMAGE],
   },
 };

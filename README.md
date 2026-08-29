@@ -1,6 +1,6 @@
 # Next.js 16 + Firebase Boilerplate
 
-![Next.js + Firebase](https://nextjs-firebase-starter.vercel.app/repository-open-graph-template.png)
+![Next.js + Firebase](public/repository-open-graph-template.png)
 
 Next.js 16 + Firebase boilerplate with server-side authentication and per-user Firestore data, both reached through the Admin SDK. Sign-in exchanges an ID token for an httpOnly session cookie the server verifies; the client never touches Firestore.
 
@@ -32,7 +32,7 @@ Next.js 16 + Firebase boilerplate with server-side authentication and per-user F
 
 ### Prerequisites
 
-- Node.js 24 or later. `engines` asks for `>=24.0.0`, so Vercel deploys on 24.x. The floor is not cosmetic: firebase-admin 14 reaches `jose` through `jwks-rsa`'s CommonJS `require`, and a Node old enough to refuse that fails to load the Admin SDK at all.
+- Node.js 24 or later. `engines` asks for `>=24.0.0` and CI builds on 24, so Vercel deploys on 24.x.
 - Firebase account with a project created
 - Firebase Admin SDK credentials
 
@@ -55,12 +55,12 @@ Next.js 16 + Firebase boilerplate with server-side authentication and per-user F
 1. In your Firebase project console, go to "Databases & Storage" > "Firestore"
 2. Click "Create database"
 3. Choose "Standard edition", then "Next"
-4. Enter a Database ID (the default is fine), pick a location, then "Next"
+4. Keep the Database ID as `(default)`, pick a location, then "Next"
 5. Start in **production mode**, then "Create"
 
 Production mode denies every read and write from web and mobile clients while still allowing authenticated application servers - which is exactly this boilerplate's shape, and what `firestore.rules` here already encodes.
 
-This step is required, not optional: without a database the home page fails outright rather than hiding the misconfiguration. See [Per-User Firestore Data](#per-user-firestore-data) for why it fails loudly by design.
+This step is required, not optional. A signed-out visitor never touches Firestore, so the page still renders - but the moment anyone signs in, the notes query hits a database that is not there and the whole page fails rather than hiding the misconfiguration. See [Per-User Firestore Data](#per-user-firestore-data) for why it fails loudly by design.
 
 ### Step 4: Generate Admin SDK Credentials
 
@@ -84,7 +84,7 @@ cp .env.local.example .env.local
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `FIREBASE_ADMIN_SERVICE_ACCOUNT` | yes | Service account JSON from Step 4, used server-side to verify sessions and manage users |
+| `FIREBASE_ADMIN_SERVICE_ACCOUNT` | yes | Service account JSON from Step 4. Verifies sessions, manages users, and is also what reaches Firestore, so it needs Firestore access in the project |
 | `NEXT_PUBLIC_FIREBASE_WEB_SDK_CONFIG` | yes | Web app config from Step 5, used by the browser SDK |
 | `SITE_URL` | no | Public URL of the deployment, used for metadata, `robots.txt` and the sitemap. Falls back to the Vercel production domain, then `http://localhost:3000` |
 
@@ -160,7 +160,7 @@ lib/
     useFirebaseAuth.ts     - Auth operations and loading state
   utils/
     firebaseErrors.ts      - Error classification and messages
-    request-origin.ts      - Same-origin guard for auth routes
+    request-origin.ts      - Same-origin guard for the state-changing routes
     useFirebaseErrorHandler.ts
   site.ts                  - Public site URL
 public/                    - Static files
@@ -168,8 +168,8 @@ firestore.rules            - Deny-all Firestore security rules
 __tests__/
   helpers/                 - Shared test doubles
   stubs/                   - Module stand-ins for the test resolver
-  lib/                     - Pure units: guards, session rules, errors, SEO
-  api/                     - Auth routes, with the Admin SDK mocked
+  lib/                     - Pure units: guards, session rules, error mapping
+  api/                     - Auth and notes routes, with the Admin SDK mocked
   client/                  - Hooks, contexts and components, under jsdom
 .github/workflows/         - Lint, test and build on push and PR
 ```
@@ -187,7 +187,7 @@ The auth routes assume a hostile caller:
 - **Same-origin only** - the state-changing routes (sign-in, sign-out, delete) reject requests whose `Origin` does not match the deployment; sign-in and deletion additionally require a JSON content type, so a cross-site form cannot sign a victim into an attacker's account.
 - **Fresh tokens only** - a session cookie is minted only from an ID token whose sign-in happened in the last 5 minutes, so a leaked ID token cannot be traded for a two-week session. Re-minting is exempt when the browser already holds a valid session for the same user, which is what the anonymous -> Google upgrade does: it grants no access the caller does not already have.
 - **Sign-out revokes everywhere** - signing out calls `revokeRefreshTokens`, which invalidates every session of that user on every device. Firebase cannot revoke a single session cookie, so a copied cookie would otherwise stay valid; if revocation fails the API reports it instead of claiming success.
-- **Deletion needs re-authentication** - deleting an account requires a confirmation and a freshly minted ID token (a Google popup re-auth for permanent accounts), because Admin-side deletion bypasses Firebase's own `requires-recent-login` rule. Deletion also sweeps that user's notes; if the sweep fails it is reported rather than hidden behind a success.
+- **Deletion needs re-authentication** - deleting an account requires a confirmation and a freshly minted ID token (a Google popup re-auth for permanent accounts), because Admin-side deletion bypasses Firebase's own `requires-recent-login` rule. It also removes that user's notes - see [Per-User Firestore Data](#per-user-firestore-data).
 
 `GET /api/auth/user` is included as a worked example of a protected route handler; the UI itself reads the user on the server.
 
@@ -209,17 +209,19 @@ Notes live at `users/{uid}/notes`. `userNotes(uid)` will build a path for whatev
 
 Deleting an account deletes the Auth user first, then sweeps that user's notes; if the sweep fails it is reported instead of hidden behind a success, and the browser is signed out and warned rather than left holding a session for an account that is gone. This can still leave notes behind: a write already past session verification when the account was deleted, or a `recursiveDelete` that fails part-way through, can leave notes under a uid nobody can authenticate as again. This boilerplate does not clean those up - a production app's usual first step is a Cloud Functions `onDelete` trigger on the auth user (or a scheduled job), but that only narrows the window: it can race the same late write, so it is best-effort, not a guarantee. Guaranteed eventual cleanup needs a durable deletion marker plus a retry or reaper process.
 
-Reads are unbounded and note creation uncapped, so a user's own page grows with their own note count. Nothing here caps or paginates; a production app would do one or the other.
+Each note's text is capped at 200 characters, trimmed, and rejected outside that range. The number of notes is not capped, and the read is unbounded, so a user's own page grows with their own note count. Nothing here caps or paginates that; a production app would do one or the other.
 
-Firestore failures are sorted rather than swallowed. Only an allow-list of transient gRPC statuses - unavailable, deadline exceeded, resource exhausted, internal - renders an "unavailable" line in place of the panel, so a blip costs this section and not the authentication card beside it. Everything else is rethrown: a missing database (`NOT_FOUND`), a service account that cannot reach the data, and any mistake in the mapping are configuration or programming faults, and there is no error boundary around the section, so they take the whole page down where you cannot miss them. That is deliberate - a setup error that renders as a permanent soothing message is worse than one that fails loudly.
+Firestore read failures in the server component are sorted rather than swallowed (the route handler's writes and deletes report a generic failure instead). Only an allow-list of transient gRPC statuses - unavailable, deadline exceeded, resource exhausted, internal - renders an "unavailable" line in place of the panel, so a blip costs this section and not the rest of the page. Everything else is rethrown: a missing database (`NOT_FOUND`), a service account that cannot reach the data, and any mistake in the mapping are configuration or programming faults, and there is no error boundary around the section, so they take the whole page down where you cannot miss them. That is deliberate - a setup error that renders as a permanent soothing message is worse than one that fails loudly.
 
-`firestore.rules` denies every client read and write. The Admin SDK bypasses these rules by design, so they do not protect any server code, including this app's own route handlers and server components - they only constrain the client. The moment anyone adds client-side Firestore access, this file becomes the only defense between that data and the internet. This repo ships no `firebase.json` or other CLI project files, so the rules are not deployed just by existing in the repo: paste `firestore.rules` into the Rules tab of the Firebase console, or run `firebase deploy --only firestore:rules` if you set up the Firebase CLI yourself.
+`firestore.rules` denies every client read and write. The Admin SDK bypasses these rules by design, so they do not protect any server code, including this app's own route handlers and server components - they only constrain the client. The moment anyone adds client-side Firestore access, this file becomes the only defense between that data and the internet. This repo ships no `firebase.json` or other CLI project files, so the rules are not deployed just by existing in the repo. Paste `firestore.rules` into the Rules tab of the Firebase console - or, to use the CLI, first run `firebase init firestore` (or write a `firebase.json` whose `firestore.rules` points at this file) and then `firebase deploy --only firestore:rules`.
 
 ## Deployment
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new) from the creators of Next.js.
 
-Set `FIREBASE_ADMIN_SERVICE_ACCOUNT` and `NEXT_PUBLIC_FIREBASE_WEB_SDK_CONFIG` in the project's environment variables, and add your Firebase auth domain to the authorized domains list in the Firebase console. `SITE_URL` is optional on Vercel: the production domain is picked up automatically.
+Set `FIREBASE_ADMIN_SERVICE_ACCOUNT` and `NEXT_PUBLIC_FIREBASE_WEB_SDK_CONFIG` in the project's environment variables. `SITE_URL` is optional on Vercel: the production domain is picked up automatically.
+
+Add every domain the app is **served from** to Authentication > Settings > Authorized domains in the Firebase console - the deployment's `.vercel.app` domain, any custom domain, and `localhost` for local development. This is the domain in the browser's address bar, not the project's `authDomain`. Google sign-in, account upgrade and account deletion all open a popup, and an unlisted domain fails every one of them with `auth/unauthorized-domain`.
 
 If you forked this repository, delete `public/google*.html` - it verifies the original author's Search Console property, not yours.
 
