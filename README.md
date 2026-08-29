@@ -151,8 +151,10 @@ lib/
 public/                    - Static files
 __tests__/
   helpers/                 - Shared test doubles
-  lib/                     - Origin guard, session rules, error mapping
+  stubs/                   - Module stand-ins for the test resolver
+  lib/                     - Pure units: guards, session rules, errors, SEO
   api/                     - Auth routes, with the Admin SDK mocked
+  client/                  - Hooks, contexts and components, under jsdom
 .github/workflows/         - Lint, test and build on push and PR
 ```
 
