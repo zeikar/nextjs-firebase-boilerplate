@@ -2,11 +2,15 @@
   "name": "nextjs",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",
@@ -16,13 +20,16 @@
     "firebase-admin": "^13.2.0",
     "next": "16.1.6",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24.1.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.3",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
