@@ -138,25 +138,10 @@ export default async function Home() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center justify-center w-full max-w-3xl">
         <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 mb-12 border border-gray-100 dark:border-gray-700 transform transition-all hover:shadow-xl">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
-              Authentication Demo
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Try out Firebase authentication with Google or Anonymous login.
-              Create an account, sign in, and explore the features.
-            </p>
+          <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-4 text-center">Features</h2>
 
-            <div className="flex justify-center">
-              <ServerAuthInfo user={user} />
-            </div>
-          </div>
-
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-            <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-3">
-              Authentication Features:
-            </h3>
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-300">
+          <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-3">Authentication Features:</h3>
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-300">
               <li className="flex items-center">
                 <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
                 Server Side Authentication
@@ -173,19 +158,13 @@ export default async function Home() {
                 <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
                 Delete Account
               </li>
-            </ul>
+          </ul>
 
-            <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mt-6 mb-3">
-              Technical Features:
-            </h3>
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-300">
+          <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-3 mt-6">Technical Features:</h3>
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-300">
               <li className="flex items-center">
                 <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
                 Next.js 16 (App Router)
-              </li>
-              <li className="flex items-center">
-                <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
-                Firebase Authentication
               </li>
               <li className="flex items-center">
                 <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
@@ -211,15 +190,30 @@ export default async function Home() {
                 <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
                 Firestore (server-side, per-user)
               </li>
-            </ul>
+              <li className="flex items-center">
+                <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
+                Tested with Vitest, verified in CI
+              </li>
+          </ul>
+        </div>
+
+        <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 mb-12 border border-gray-100 dark:border-gray-700 transform transition-all hover:shadow-xl">
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Authentication Demo</h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Try out Firebase authentication with Google or Anonymous login.
+              Create an account, sign in, and explore the features.
+            </p>
+
+            <div className="flex justify-center">
+              <ServerAuthInfo user={user} />
+            </div>
           </div>
         </div>
 
         <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 mb-12 border border-gray-100 dark:border-gray-700 transform transition-all hover:shadow-xl">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
-              Firestore Demo
-            </h2>
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Firestore Demo</h2>
             <p className="text-gray-600 dark:text-gray-300 mb-6">
               Notes are stored per-user and reached only through the Admin
               SDK on the server.

@@ -16,7 +16,6 @@ Next.js 16 + Firebase boilerplate with server-side authentication and per-user F
 ### Technical Features
 
 - ✅ Next.js 16 (App Router)
-- ✅ Firebase Authentication
 - ✅ TypeScript Support
 - ✅ Tailwind CSS Styling
 - ✅ SEO Optimized
