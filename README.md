@@ -22,6 +22,7 @@ Production-ready Next.js 16 + Firebase boilerplate with built-in authentication,
 - ✅ SEO Optimized
 - ✅ Responsive Design
 - ✅ Notification System
+- ✅ Firestore (server-side, per-user)
 - ✅ Tested with Vitest, verified in CI
 
 ## Demo
@@ -50,13 +51,21 @@ Production-ready Next.js 16 + Firebase boilerplate with built-in authentication,
 2. Click "Get started"
 3. Enable Google and Anonymous sign-in methods
 
-### Step 3: Generate Admin SDK Credentials
+### Step 3: Create the Firestore Database
+
+1. In your Firebase project console, go to "Firestore Database"
+2. Click "Create database"
+3. Start in production mode and pick a location
+
+This step is required: without it, the home page fails outright instead of hiding the misconfiguration. A missing database raises `NOT_FOUND`, which is deliberately outside the transient-error allow-list, so it surfaces rather than sitting behind a soothing message - and with no error boundary around the notes section, it takes the whole page with it.
+
+### Step 4: Generate Admin SDK Credentials
 
 1. In your Firebase project settings, go to "Service accounts"
 2. Click "Generate new private key"
 3. Save the JSON file and use its contents for the `FIREBASE_ADMIN_SERVICE_ACCOUNT` environment variable
 
-### Step 4: Get Web SDK Configuration
+### Step 5: Get Web SDK Configuration
 
 1. In your Firebase project settings, go to "General"
 2. Under "Your apps", click the web app (create one if needed)
@@ -72,8 +81,8 @@ cp .env.local.example .env.local
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `FIREBASE_ADMIN_SERVICE_ACCOUNT` | yes | Service account JSON from Step 3, used server-side to verify sessions and manage users |
-| `NEXT_PUBLIC_FIREBASE_WEB_SDK_CONFIG` | yes | Web app config from Step 4, used by the browser SDK |
+| `FIREBASE_ADMIN_SERVICE_ACCOUNT` | yes | Service account JSON from Step 4, used server-side to verify sessions and manage users |
+| `NEXT_PUBLIC_FIREBASE_WEB_SDK_CONFIG` | yes | Web app config from Step 5, used by the browser SDK |
 | `SITE_URL` | no | Public URL of the deployment, used for metadata, `robots.txt` and the sitemap. Falls back to the Vercel production domain, then `http://localhost:3000` |
 
 > **IMPORTANT**: both JSON values must be on a **single line**, with no line breaks - the `private_key` field in particular. Line breaks inside the JSON cause authentication errors.
@@ -127,11 +136,13 @@ app/                       - Next.js App Router
     signin/                - Exchanges an ID token for a session cookie
     signout/               - Revokes the session and clears the cookie
     user/                  - Reads the current user, deletes the account
+  api/notes/               - Create and delete the signed-in user's notes
 components/
   auth/                    - Sign in/out, upgrade and delete controls
   icons/                   - Icon components
   modals/AuthModal.tsx     - Sign-in modal
   notifications/           - Notification item
+  notes/                   - Notes list/form (client) and the server-side reader
 contexts/
   auth-context.tsx         - Single auth state for the whole app
   notification-context.tsx - Notification state and container
@@ -141,6 +152,7 @@ lib/
     auth-server.ts         - Session verification for server code
     authService.ts         - Client calls to the auth API routes
     client.ts              - Firebase Web SDK setup
+    notes.ts               - Per-user notes subcollection and Note type
     session.ts             - Cookie name, lifetime, freshness rule
     useFirebaseAuth.ts     - Auth operations and loading state
   utils/
@@ -149,6 +161,7 @@ lib/
     useFirebaseErrorHandler.ts
   site.ts                  - Public site URL
 public/                    - Static files
+firestore.rules            - Deny-all Firestore security rules
 __tests__/
   helpers/                 - Shared test doubles
   stubs/                   - Module stand-ins for the test resolver
@@ -171,7 +184,7 @@ The auth routes assume a hostile caller:
 - **Same-origin only** - the state-changing routes (sign-in, sign-out, delete) reject requests whose `Origin` does not match the deployment; sign-in and deletion additionally require a JSON content type, so a cross-site form cannot sign a victim into an attacker's account.
 - **Fresh tokens only** - a session cookie is minted only from an ID token whose sign-in happened in the last 5 minutes, so a leaked ID token cannot be traded for a two-week session. Re-minting is exempt when the browser already holds a valid session for the same user, which is what the anonymous -> Google upgrade does: it grants no access the caller does not already have.
 - **Sign-out revokes everywhere** - signing out calls `revokeRefreshTokens`, which invalidates every session of that user on every device. Firebase cannot revoke a single session cookie, so a copied cookie would otherwise stay valid; if revocation fails the API reports it instead of claiming success.
-- **Deletion needs re-authentication** - deleting an account requires a confirmation and a freshly minted ID token (a Google popup re-auth for permanent accounts), because Admin-side deletion bypasses Firebase's own `requires-recent-login` rule.
+- **Deletion needs re-authentication** - deleting an account requires a confirmation and a freshly minted ID token (a Google popup re-auth for permanent accounts), because Admin-side deletion bypasses Firebase's own `requires-recent-login` rule. Deletion also sweeps that user's notes; if the sweep fails it is reported rather than hidden behind a success.
 
 `GET /api/auth/user` is included as a worked example of a protected route handler; the UI itself reads the user on the server.
 
@@ -186,6 +199,14 @@ Built-in error handling for Firebase authentication with user-friendly error mes
 ### Notification System
 
 A contextual notification system to display success/error messages to users.
+
+### Per-User Firestore Data
+
+Notes live at `users/{uid}/notes`. `userNotes(uid)` will build a path for whatever uid it is handed, so the layout itself enforces nothing - ownership rests entirely on every caller passing the uid resolved from the verified session cookie, never one taken from a request body or a path segment. The server component reads the collection directly with the Admin SDK; the route handler at `app/api/notes/route.ts` writes to it behind `rejectCrossSiteRequest`, the same guard the auth routes use. The client component never imports `firebase/firestore` - it only calls that API route.
+
+Deleting an account deletes the Auth user first, then sweeps that user's notes; if the sweep fails it is reported instead of hidden behind a success, and the browser is signed out and warned rather than left holding a session for an account that is gone. This can still leave notes behind: a write already past session verification when the account was deleted, or a `recursiveDelete` that fails part-way through, can leave notes under a uid nobody can authenticate as again. This boilerplate does not clean those up - a production app closes that gap with a Cloud Functions `onDelete` trigger on the auth user, or a scheduled job.
+
+`firestore.rules` denies every client read and write. The Admin SDK bypasses these rules by design, so they do not protect any server code, including this app's own route handlers and server components - they only constrain the client. The moment anyone adds client-side Firestore access, this file becomes the only defense between that data and the internet. This repo ships no `firebase.json` or other CLI project files, so the rules are not deployed just by existing in the repo: paste `firestore.rules` into the Rules tab of the Firebase console, or run `firebase deploy --only firestore:rules` if you set up the Firebase CLI yourself.
 
 ## Deployment
 
