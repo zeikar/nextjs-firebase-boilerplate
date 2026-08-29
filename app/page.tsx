@@ -3,6 +3,7 @@ import { ServerAuthInfo } from "@/components/auth/ServerAuthInfo";
 import { Metadata } from "next";
 import { CheckCircleIcon } from "@heroicons/react/20/solid";
 import GitHubIcon from "@/components/icons/GitHubIcon";
+import { SITE_OG_IMAGE, SITE_URL } from "@/lib/site";
 
 // Configure the page as dynamic to allow server-side cookies
 export const dynamic = "force-dynamic";
@@ -28,11 +29,11 @@ export const metadata: Metadata = {
     title: "Next.js 16 + Firebase Boilerplate",
     description:
       "Production-ready Next.js 16 + Firebase boilerplate with built-in authentication",
-    url: "https://nextjs-firebase-starter.vercel.app/",
+    url: `${SITE_URL}/`,
     siteName: "Next.js Firebase Boilerplate",
     images: [
       {
-        url: "https://dogimg.vercel.app/api/og?url=https://nextjs-firebase-starter.vercel.app/",
+        url: SITE_OG_IMAGE,
         width: 1200,
         height: 630,
         alt: "Next.js 16 + Firebase Boilerplate",
@@ -46,9 +47,7 @@ export const metadata: Metadata = {
     title: "Next.js 16 + Firebase Boilerplate",
     description:
       "Production-ready Next.js 16 + Firebase boilerplate with built-in authentication",
-    images: [
-      "https://dogimg.vercel.app/api/og?url=https://nextjs-firebase-starter.vercel.app/",
-    ],
+    images: [SITE_OG_IMAGE],
   },
 };
 
@@ -57,8 +56,8 @@ const jsonLd = {
   "@graph": [
     {
       "@type": "WebSite",
-      "@id": "https://nextjs-firebase-starter.vercel.app/#website",
-      url: "https://nextjs-firebase-starter.vercel.app/",
+      "@id": `${SITE_URL}/#website`,
+      url: `${SITE_URL}/`,
       name: "Next.js 16 + Firebase Boilerplate",
       description:
         "Production-ready Next.js 16 + Firebase boilerplate with built-in authentication, server-side rendering, and TypeScript support",

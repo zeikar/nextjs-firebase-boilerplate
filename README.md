@@ -31,7 +31,7 @@ Production-ready Next.js 16 + Firebase boilerplate with built-in authentication,
 
 ### Prerequisites
 
-- Node.js 18.17.0 or later
+- Node.js 20.9.0 or later (required by Next.js 16)
 - Firebase account with a project created
 - Firebase Admin SDK credentials
 
@@ -63,31 +63,19 @@ Production-ready Next.js 16 + Firebase boilerplate with built-in authentication,
 
 ### Environment Variables
 
-You can set up environment variables in two ways:
-
-#### Option 1: Copy from example file (Recommended)
-
-Copy the provided example file:
+Copy the example file and fill in your own values:
 
 ```bash
 cp .env.local.example .env.local
 ```
 
-Then edit `.env.local` with your actual Firebase configuration values.
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `FIREBASE_ADMIN_SERVICE_ACCOUNT` | yes | Service account JSON from Step 3, used server-side to verify sessions and manage users |
+| `NEXT_PUBLIC_FIREBASE_WEB_SDK_CONFIG` | yes | Web app config from Step 4, used by the browser SDK |
+| `SITE_URL` | no | Public URL of the deployment, used for metadata, `robots.txt` and the sitemap. Falls back to the Vercel production domain, then `http://localhost:3000` |
 
-#### Option 2: Create manually
-
-Create a `.env.local` file in the root directory with the following variables:
-
-```
-# Firebase Admin SDK credentials (for server-side authentication)
-FIREBASE_ADMIN_SERVICE_ACCOUNT={"type":"service_account","project_id":"YOUR_PROJECT_ID","private_key_id":"YOUR_PRIVATE_KEY_ID","private_key":"YOUR_PRIVATE_KEY","client_email":"YOUR_CLIENT_EMAIL","client_id":"YOUR_CLIENT_ID","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_x509_cert_url":"YOUR_CLIENT_X509_CERT_URL","universe_domain":"googleapis.com"}
-
-# Firebase Web SDK configuration (for client-side authentication)
-NEXT_PUBLIC_FIREBASE_WEB_SDK_CONFIG={"apiKey":"YOUR_API_KEY","authDomain":"YOUR_PROJECT_ID.firebaseapp.com","projectId":"YOUR_PROJECT_ID","storageBucket":"YOUR_PROJECT_ID.firebasestorage.app","messagingSenderId":"YOUR_MESSAGING_SENDER_ID","appId":"YOUR_APP_ID"}
-```
-
-> **IMPORTANT**: When setting up the `FIREBASE_ADMIN_SERVICE_ACCOUNT`, `NEXT_PUBLIC_FIREBASE_WEB_SDK_CONFIG` environment variable, you must remove all line breaks from the JSON. The entire JSON content should be on a single line. Especially in the `private_key` field, line breaks can cause authentication errors. Always compress the JSON into one line before adding it to your `.env.local` file.
+> **IMPORTANT**: both JSON values must be on a **single line**, with no line breaks - the `private_key` field in particular. Line breaks inside the JSON cause authentication errors.
 
 ## Installation
 
@@ -124,55 +112,60 @@ bun dev
 
 4. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+Other scripts: `npm run lint` (ESLint), `npm run build` (production build), `npm start` (serve the build).
+
 ## Project Structure
 
 ```
-app/                  - Next.js App Router pages
-  page.tsx            - Homepage
-  layout.tsx          - Root layout
-  api/                - API routes for authentication
-    auth/
-      signin/         - Sign in functionality
-      signout/        - Sign out functionality
-      user/           - User data functionality
-components/           - Reusable UI components
-  auth/               - Authentication components
-    AccountDeleteButton.tsx
-    AccountUpgradeButton.tsx
-    AuthButtons.tsx
-    ServerAuthInfo.tsx
-  common/             - Common UI components
-  icons/              - Icon components
-    GitHubIcon.tsx
-    GoogleIcon.tsx
-    Loading.tsx
-    UserIcon.tsx
-  layout/             - Layout components
-  modals/             - Modal components
-    AuthModal.tsx
-  notifications/      - Notification components
-    notification-item.tsx
-contexts/             - React contexts
-  notification-context.tsx
-lib/                  - Utility functions and services
-  firebase/           - Firebase related utilities
-    admin.ts          - Firebase Admin SDK setup
-    auth-server.ts    - Server-side auth utilities
-    authService.ts    - Client-side auth service
-    client.ts         - Firebase client SDK setup
-    useFirebaseAuth.ts - Custom hook for Firebase auth
-  utils/              - General utility functions
-    firebaseErrors.ts - Firebase error handling
+app/                       - Next.js App Router
+  layout.tsx               - Root layout, notification + auth providers
+  page.tsx                 - Homepage
+  robots.ts, sitemap.ts    - SEO routes
+  globals.css              - Tailwind entry point
+  api/auth/
+    signin/                - Exchanges an ID token for a session cookie
+    signout/               - Revokes the session and clears the cookie
+    user/                  - Reads the current user, deletes the account
+components/
+  auth/                    - Sign in/out, upgrade and delete controls
+  icons/                   - Icon components
+  modals/AuthModal.tsx     - Sign-in modal
+  notifications/           - Notification item
+contexts/
+  auth-context.tsx         - Single auth state for the whole app
+  notification-context.tsx - Notification state and container
+lib/
+  firebase/
+    admin.ts               - Firebase Admin SDK setup
+    auth-server.ts         - Session verification for server code
+    authService.ts         - Client calls to the auth API routes
+    client.ts              - Firebase Web SDK setup
+    session.ts             - Cookie name, lifetime, freshness rule
+    useFirebaseAuth.ts     - Auth operations and loading state
+  utils/
+    firebaseErrors.ts      - Error classification and messages
+    request-origin.ts      - Same-origin guard for auth routes
     useFirebaseErrorHandler.ts
-public/               - Static files
-types/                - TypeScript type definitions
+  site.ts                  - Public site URL
+public/                    - Static files
 ```
 
 ## Key Features
 
 ### Server-Side Authentication
 
-This boilerplate implements secure server-side authentication using Firebase Admin SDK, allowing you to verify user sessions on the server side and protect API routes.
+Sign-in exchanges a Firebase ID token for an `httpOnly` session cookie (2 weeks), which server components and route handlers verify with the Admin SDK. `getServerUser()` returns the current user for rendering; `getServerSession()` additionally distinguishes an unusable cookie from a Firebase outage, so a route handler can answer `503` instead of claiming the caller is signed out.
+
+### Session Security
+
+The auth routes assume a hostile caller:
+
+- **Same-origin only** - the state-changing routes (sign-in, sign-out, delete) reject requests whose `Origin` does not match the deployment; sign-in and deletion additionally require a JSON content type, so a cross-site form cannot sign a victim into an attacker's account.
+- **Fresh tokens only** - a session cookie is minted only from an ID token whose sign-in happened in the last 5 minutes, so a leaked ID token cannot be traded for a two-week session. Re-minting is exempt when the browser already holds a valid session for the same user, which is what the anonymous -> Google upgrade does: it grants no access the caller does not already have.
+- **Sign-out revokes everywhere** - signing out calls `revokeRefreshTokens`, which invalidates every session of that user on every device. Firebase cannot revoke a single session cookie, so a copied cookie would otherwise stay valid; if revocation fails the API reports it instead of claiming success.
+- **Deletion needs re-authentication** - deleting an account requires a confirmation and a freshly minted ID token (a Google popup re-auth for permanent accounts), because Admin-side deletion bypasses Firebase's own `requires-recent-login` rule.
+
+`GET /api/auth/user` is included as a worked example of a protected route handler; the UI itself reads the user on the server.
 
 ### Authentication Modal
 
@@ -189,6 +182,10 @@ A contextual notification system to display success/error messages to users.
 ## Deployment
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new) from the creators of Next.js.
+
+Set `FIREBASE_ADMIN_SERVICE_ACCOUNT` and `NEXT_PUBLIC_FIREBASE_WEB_SDK_CONFIG` in the project's environment variables, and add your Firebase auth domain to the authorized domains list in the Firebase console. `SITE_URL` is optional on Vercel: the production domain is picked up automatically.
+
+If you forked this repository, delete `public/google*.html` - it verifies the original author's Search Console property, not yours.
 
 Check out the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 

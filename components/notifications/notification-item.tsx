@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Notification } from "@/contexts/notification-context";
 import {
   XCircleIcon,
@@ -27,25 +27,25 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
     switch (notification.type) {
       case "error":
         return {
-          bg: "bg-red-50 border-l-4 border-red-500",
+          bg: "bg-red-50 dark:bg-red-950 border-l-4 border-red-500",
           icon: <XCircleIcon className="w-5 h-5 text-red-500" />,
           title: "Error",
         };
       case "success":
         return {
-          bg: "bg-green-50 border-l-4 border-green-500",
+          bg: "bg-green-50 dark:bg-green-950 border-l-4 border-green-500",
           icon: <CheckCircleIcon className="w-5 h-5 text-green-500" />,
           title: "Success",
         };
       case "warning":
         return {
-          bg: "bg-amber-50 border-l-4 border-amber-500",
+          bg: "bg-amber-50 dark:bg-amber-950 border-l-4 border-amber-500",
           icon: <ExclamationTriangleIcon className="w-5 h-5 text-amber-500" />,
           title: "Warning",
         };
       default:
         return {
-          bg: "bg-blue-50 border-l-4 border-blue-500",
+          bg: "bg-blue-50 dark:bg-blue-950 border-l-4 border-blue-500",
           icon: <InformationCircleIcon className="w-5 h-5 text-blue-500" />,
           title: "Info",
         };
@@ -54,31 +54,53 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
 
   const { bg, icon, title } = getTypeStyles();
 
+  // Keep the latest callback reachable without depending on it: the parent
+  // passes a new inline arrow on every render, and depending on it would
+  // restart this notification's timer whenever another one appears.
+  const onRemoveRef = useRef(onRemove);
+  const removalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    onRemoveRef.current = onRemove;
+  });
+
+  // One dismissal path for the timer and the close button alike: play the exit
+  // animation, then remove exactly once however it was triggered.
+  const dismiss = useCallback(() => {
+    if (removalRef.current) {
+      return;
+    }
+
+    setIsVisible(false);
+    removalRef.current = setTimeout(() => {
+      onRemoveRef.current?.();
+    }, 300); // Remove after animation completes
+  }, []);
+
   // Handle appearance and disappearance animations
   useEffect(() => {
-    setIsVisible(true);
+    // Flip the class in a frame of its own, so the enter transition runs
+    const enterFrame = requestAnimationFrame(() => setIsVisible(true));
 
     // Update progress bar
     const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev <= 0) return 0;
-        return prev - 100 / (duration / 100);
-      });
+      setProgress((prev) => Math.max(prev - 100 / (duration / 100), 0));
     }, 100);
 
     // Auto-dismiss
-    const timer = setTimeout(() => {
-      setIsVisible(false);
-      setTimeout(() => {
-        onRemove?.();
-      }, 300); // Remove after animation completes
-    }, duration);
+    const timer = setTimeout(dismiss, duration);
 
     return () => {
-      clearTimeout(timer);
+      cancelAnimationFrame(enterFrame);
       clearInterval(interval);
+      clearTimeout(timer);
+
+      if (removalRef.current) {
+        clearTimeout(removalRef.current);
+        removalRef.current = null;
+      }
     };
-  }, [duration, onRemove]);
+  }, [duration, dismiss]);
 
   return (
     <div
@@ -89,7 +111,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
       <div className="relative overflow-hidden rounded-lg">
         {/* Progress bar */}
         <div
-          className="absolute bottom-0 left-0 h-1 bg-gray-300 bg-opacity-50"
+          className="absolute bottom-0 left-0 h-1 bg-gray-300/50 dark:bg-gray-500/50"
           style={{ width: `${progress}%`, transition: "width 100ms linear" }}
         />
 
@@ -97,18 +119,15 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
           <div className="flex items-start">
             <div className="shrink-0">{icon}</div>
             <div className="ml-3 w-0 flex-1">
-              <p className="text-sm font-medium text-gray-900">{title}</p>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{title}</p>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {notification.message}
               </p>
             </div>
             <div className="ml-4 shrink-0 flex">
               <button
-                onClick={() => {
-                  setIsVisible(false);
-                  setTimeout(() => onRemove?.(), 300);
-                }}
-                className="inline-flex text-gray-400 hover:text-gray-500 focus:outline-none"
+                onClick={dismiss}
+                className="inline-flex text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
               >
                 <XMarkIcon className="h-5 w-5" />
               </button>
