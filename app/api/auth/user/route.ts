@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { adminAuth } from "@/lib/firebase/admin";
+import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import { getServerSession } from "@/lib/firebase/auth-server";
+import { userNotes } from "@/lib/firebase/notes";
 import { SESSION_COOKIE_NAME, isRecent } from "@/lib/firebase/session";
 import { isRejectedCredentialError } from "@/lib/utils/firebaseErrors";
 import { rejectCrossSiteRequest } from "@/lib/utils/request-origin";
@@ -136,8 +137,48 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  // Delete session cookie
+  let notesDeleted = true;
+
+  // The Auth user goes first: a failed `deleteUser` leaves everything intact
+  // and retryable, and destroying the data of an account that still exists is
+  // worse than leaving data behind for one that does not. The sweep follows
+  // because that uid can no longer pass `verifySessionCookie(cookie, true)`,
+  // so no new authenticated write can reach the collection.
+  //
+  // Notes can still be left behind, and nothing here promises otherwise: a
+  // request that was already past session verification when `deleteUser`
+  // returned can still commit its write, and `recursiveDelete` can delete part
+  // of the collection before rejecting. Either path leaves notes under a uid
+  // nobody can authenticate as again - unreachable through this API and only
+  // removable out of band. A production app closes both with a Cloud Functions
+  // `onDelete` trigger on the auth user or a scheduled reaper, which is
+  // outside a boilerplate whose subject is uid-scoped access.
+  try {
+    // Firestore does not cascade, so the subcollection has to be swept
+    // explicitly or it outlives the account forever.
+    await adminDb.recursiveDelete(userNotes(uid));
+  } catch (error) {
+    console.error("Account notes deletion error:", error);
+    notesDeleted = false;
+  }
+
+  // Delete session cookie. The failures above keep it because the credential
+  // may well still be good; here the account is gone, so there is none left to
+  // preserve - not even on the partial-failure 500 below.
   cookieStore.delete(SESSION_COOKIE_NAME);
+
+  if (!notesDeleted) {
+    // The account is gone either way, so the caller must not be told to retry
+    // a deletion that already happened.
+    return NextResponse.json(
+      {
+        success: false,
+        accountDeleted: true,
+        error: "Account deleted, but some of its notes could not be removed.",
+      },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json({ success: true });
 }

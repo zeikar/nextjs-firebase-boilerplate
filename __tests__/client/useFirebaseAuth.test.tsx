@@ -369,7 +369,80 @@ describe("deleteAccount", () => {
 
     expect(outcome?.success).toBe(false);
     expect(firebaseAuth.signOut).not.toHaveBeenCalled();
+    expect(authService.deleteSession).not.toHaveBeenCalled();
     expect(notify.showFirebaseError).toHaveBeenCalled();
+  });
+
+  it("signs out anyway when the account is gone but its notes are not", async () => {
+    const user = userWith({ isAnonymous: true });
+    client.auth.currentUser = user;
+    authService.deleteUserAccount.mockResolvedValue({
+      success: false,
+      accountDeleted: true,
+      error: "Account deleted, but some of its notes could not be removed.",
+    });
+    const { result } = renderHook(() => useFirebaseAuth());
+
+    await act(async () => {
+      await expect(result.current.deleteAccount()).resolves.toEqual({
+        success: false,
+        accountDeleted: true,
+        error: "Account deleted, but some of its notes could not be removed.",
+      });
+    });
+
+    expect(firebaseAuth.signOut).toHaveBeenCalledWith(client.auth);
+    expect(router.refresh).toHaveBeenCalled();
+    expect(notify.showWarningMessage).toHaveBeenCalledWith(
+      "Account deleted, but some of its notes could not be removed."
+    );
+    expect(notify.showSuccessMessage).not.toHaveBeenCalled();
+  });
+
+  it("still reports the account as gone when the client sign-out fails", async () => {
+    // Falling into the catch would answer with neither flag, which reads as
+    // "the account is still there" - and the server just said it is not.
+    client.auth.currentUser = userWith({ isAnonymous: true });
+    firebaseAuth.signOut.mockRejectedValue({
+      code: "auth/network-request-failed",
+    });
+    const { result } = renderHook(() => useFirebaseAuth());
+
+    await act(async () => {
+      await expect(result.current.deleteAccount()).resolves.toEqual({
+        success: true,
+      });
+    });
+
+    expect(router.refresh).toHaveBeenCalled();
+    expect(notify.showSuccessMessage).toHaveBeenCalledWith(
+      "Account successfully deleted."
+    );
+    expect(notify.showFirebaseError).not.toHaveBeenCalled();
+  });
+
+  it("ends the session on both sides when the outcome is unknown", async () => {
+    // The request may already have deleted the account, and nothing here
+    // reconciles that later.
+    const user = userWith({ isAnonymous: true });
+    client.auth.currentUser = user;
+    authService.deleteUserAccount.mockResolvedValue({
+      success: false,
+      outcomeUnknown: true,
+      error: "An error occurred while deleting account.",
+    });
+    const { result } = renderHook(() => useFirebaseAuth());
+
+    await act(async () => {
+      await result.current.deleteAccount();
+    });
+
+    expect(authService.deleteSession).toHaveBeenCalled();
+    expect(firebaseAuth.signOut).toHaveBeenCalledWith(client.auth);
+    expect(router.refresh).toHaveBeenCalled();
+    expect(notify.showWarningMessage).toHaveBeenCalledWith(
+      "The deletion could not be confirmed, so the session was ended as a precaution."
+    );
   });
 
   it("stops when re-authentication fails", async () => {

@@ -12,6 +12,23 @@ export interface AuthResult {
 }
 
 /**
+ * The three outcomes of an account deletion, which are not interchangeable: a
+ * refusal carries neither flag and says the account is still there,
+ * `accountDeleted` says it is gone and only the cleanup behind it failed, and
+ * `outcomeUnknown` says the request may have committed before its answer was
+ * lost - `deleteUser` can succeed and the response still never arrive.
+ *
+ * The flags are the server's answer about the account, so whatever runs after
+ * it - clearing the client session, refreshing the page - has to pass that
+ * answer back unchanged. Returning the flagless shape for a failure of those
+ * would claim the account is intact after the server said it was deleted.
+ */
+export interface DeleteAccountResult extends AuthResult {
+  accountDeleted?: boolean;
+  outcomeUnknown?: boolean;
+}
+
+/**
  * Sends the Firebase ID token to the server to set up session cookies
  */
 export const sendTokenToServer = async (
@@ -76,7 +93,7 @@ export const deleteSession = async (): Promise<AuthResult> => {
  */
 export const deleteUserAccount = async (
   idToken: string
-): Promise<AuthResult> => {
+): Promise<DeleteAccountResult> => {
   try {
     const response = await fetch("/api/auth/user", {
       method: "DELETE",
@@ -89,14 +106,22 @@ export const deleteUserAccount = async (
     const data = await response.json();
 
     if (!response.ok || !data.success) {
-      throw new Error(data.error || "Failed to delete account.");
+      return {
+        success: false,
+        // Only the server knows whether the account itself survived, so its
+        // answer is passed through rather than flattened into a failure.
+        ...(data.accountDeleted ? { accountDeleted: true } : {}),
+        error: data.error || "Failed to delete account.",
+      };
     }
 
     return { success: true };
   } catch (error) {
+    // The request never produced an answer, so the account may be gone.
     console.error("Account deletion error:", error);
     return {
       success: false,
+      outcomeUnknown: true,
       error: getErrorMessage(error, "An error occurred while deleting account."),
     };
   }

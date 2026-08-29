@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SESSION_COOKIE_NAME } from "@/lib/firebase/session";
 import { cookieJar } from "../helpers/cookie-jar";
+import { firestoreDouble } from "../helpers/firestore-double";
 
 const adminAuth = vi.hoisted(() => ({
   verifySessionCookie: vi.fn(),
@@ -9,7 +10,10 @@ const adminAuth = vi.hoisted(() => ({
   deleteUser: vi.fn(),
 }));
 
-vi.mock("@/lib/firebase/admin", () => ({ adminAuth }));
+vi.mock("@/lib/firebase/admin", async () => {
+  const { firestoreDouble } = await import("../helpers/firestore-double");
+  return { adminAuth, adminDb: firestoreDouble.adminDb };
+});
 vi.mock("next/headers", async () => {
   const { cookieJar } = await import("../helpers/cookie-jar");
   return { cookies: async () => cookieJar.store };
@@ -46,6 +50,7 @@ function givenSessionCookie() {
 beforeEach(() => {
   vi.clearAllMocks();
   cookieJar.reset();
+  firestoreDouble.reset();
   vi.setSystemTime(NOW);
   vi.spyOn(console, "error").mockImplementation(() => {});
   adminAuth.deleteUser.mockResolvedValue(undefined);
@@ -217,6 +222,40 @@ describe("DELETE /api/auth/user", () => {
     expect(cookieJar.records.has(SESSION_COOKIE_NAME)).toBe(false);
   });
 
+  it("sweeps the deleted user's notes, and only once the account is gone", async () => {
+    // The route explains why that order is the safe one.
+    givenFreshReauth();
+
+    const response = await DELETE(deleteRequest());
+
+    expect(response.status).toBe(200);
+    expect(firestoreDouble.recursiveDelete).toHaveBeenCalledWith(
+      "users/user-1/notes"
+    );
+    const [deletedAt] = adminAuth.deleteUser.mock.invocationCallOrder;
+    const [sweptAt] = firestoreDouble.recursiveDelete.mock.invocationCallOrder;
+    expect(sweptAt).toBeGreaterThan(deletedAt);
+  });
+
+  it("reports the account as deleted when its notes could not be swept", async () => {
+    givenFreshReauth();
+    firestoreDouble.recursiveDelete.mockRejectedValue(new Error("sweep failed"));
+
+    const response = await DELETE(deleteRequest());
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      success: false,
+      accountDeleted: true,
+      error: "Account deleted, but some of its notes could not be removed.",
+    });
+    expect(cookieJar.records.has(SESSION_COOKIE_NAME)).toBe(false);
+    expect(console.error).toHaveBeenCalledWith(
+      "Account notes deletion error:",
+      expect.any(Error)
+    );
+  });
+
   it("checks both credentials for revocation", async () => {
     givenFreshReauth();
 
@@ -320,5 +359,7 @@ describe("DELETE /api/auth/user", () => {
       error: "Failed to delete account.",
     });
     expect(cookieJar.records.has(SESSION_COOKIE_NAME)).toBe(true);
+    // Nothing was deleted, so the notes have to survive the retry.
+    expect(firestoreDouble.recursiveDelete).not.toHaveBeenCalled();
   });
 });

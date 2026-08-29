@@ -139,11 +139,33 @@ describe("deleteUserAccount", () => {
     });
   });
 
-  it("falls back to a generic message when the request throws", async () => {
+  it("reports the account as gone when only its cleanup failed", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(
+        {
+          success: false,
+          accountDeleted: true,
+          error: "Account deleted, but some of its notes could not be removed.",
+        },
+        false
+      )
+    );
+
+    await expect(deleteUserAccount("fresh")).resolves.toEqual({
+      success: false,
+      accountDeleted: true,
+      error: "Account deleted, but some of its notes could not be removed.",
+    });
+  });
+
+  it("marks the outcome unknown when no answer arrives", async () => {
+    // The deletion may well have gone through, so this must not read as a
+    // refusal.
     fetchMock.mockRejectedValue(new Error(""));
 
     await expect(deleteUserAccount("token")).resolves.toEqual({
       success: false,
+      outcomeUnknown: true,
       error: "An error occurred while deleting account.",
     });
   });

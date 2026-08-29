@@ -13,6 +13,7 @@ import { auth, googleProvider } from "./client";
 import { useRouter } from "next/navigation";
 import {
   AuthResult,
+  DeleteAccountResult,
   sendTokenToServer,
   deleteSession,
   deleteUserAccount,
@@ -219,7 +220,7 @@ export function useFirebaseAuth() {
    * Server-side deletion bypasses Firebase's `requires-recent-login` rule, so
    * the user re-authenticates first and the fresh ID token is sent as proof.
    */
-  const deleteAccount = async (): Promise<AuthResult> => {
+  const deleteAccount = async (): Promise<DeleteAccountResult> => {
     try {
       setLoadingProvider("delete");
 
@@ -237,20 +238,73 @@ export function useFirebaseAuth() {
 
       const serverResult = await deleteUserAccount(idToken);
 
-      if (!serverResult.success) {
+      const accountMayBeGone =
+        serverResult.success ||
+        serverResult.accountDeleted ||
+        serverResult.outcomeUnknown;
+
+      if (!accountMayBeGone) {
+        // A definite refusal: the account is still there, so nothing on the
+        // client is cleared either.
         throw new Error(
           serverResult.error || "Failed to delete account on server"
         );
       }
 
-      // The account no longer exists, so drop the client session as well.
-      await firebaseSignOut(auth);
+      if (serverResult.outcomeUnknown) {
+        // An unconfirmed destructive request may already have deleted the
+        // account, and nothing here reconciles that later: `getServerSession()`
+        // only reads the cookie, and the one handler that clears an invalid
+        // one, `GET /api/auth/user`, is called by nothing in this app. Signing
+        // out is the recoverable direction - if the account survived the user
+        // signs in again, and if it did not the browser is already correct.
+        const [clientOutcome] = await Promise.allSettled([
+          firebaseSignOut(auth),
+          deleteSession(),
+        ]);
+
+        if (clientOutcome.status === "rejected") {
+          // `deleteSession()` cannot reject, so the server cookie is gone
+          // either way; only this browser's own SDK state may be left over.
+          console.error(
+            "Account deletion sign out error:",
+            clientOutcome.reason
+          );
+        }
+
+        router.refresh();
+        showWarningMessage(
+          "The deletion could not be confirmed, so the session was ended as a precaution."
+        );
+
+        return serverResult;
+      }
+
+      // The account no longer exists whatever its cleanup did, so drop the
+      // client session as well. A rejection here must not reach the catch
+      // below: that answer carries no flags, which would report the account as
+      // still there right after the server confirmed it was deleted.
+      const [clientOutcome] = await Promise.allSettled([firebaseSignOut(auth)]);
+
+      if (clientOutcome.status === "rejected") {
+        // Not shown to the user: the deletion itself is reported below, and
+        // what is left over is this browser's own SDK state.
+        console.error("Account deletion sign out error:", clientOutcome.reason);
+      }
 
       // Refresh the page to reflect changes
       router.refresh();
-      showSuccessMessage("Account successfully deleted.");
 
-      return { success: true };
+      if (serverResult.success) {
+        showSuccessMessage("Account successfully deleted.");
+      } else {
+        showWarningMessage(
+          serverResult.error ||
+            "Account deleted, but some of its data could not be removed."
+        );
+      }
+
+      return serverResult;
     } catch (error) {
       console.error("Account deletion error:", error);
       showFirebaseError(error, "An error occurred while deleting account.");
