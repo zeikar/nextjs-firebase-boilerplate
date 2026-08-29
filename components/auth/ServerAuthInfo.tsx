@@ -1,4 +1,4 @@
-import { getServerUser, ServerUser } from "@/lib/firebase/auth-server";
+import { ServerUser } from "@/lib/firebase/auth-server";
 import AuthButtons from "./AuthButtons";
 import AccountUpgradeButton from "./AccountUpgradeButton";
 import AccountDeleteButton from "./AccountDeleteButton";
@@ -8,8 +8,8 @@ type ServerAuthInfoProps = {
   user: ServerUser | null;
 };
 
-// Presentational part, rendered with the data the server resolved
-function AuthContent({ user }: ServerAuthInfoProps) {
+// Server component
+export function ServerAuthInfo({ user }: ServerAuthInfoProps) {
   if (user) {
     return (
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 p-4 rounded-xl bg-white dark:bg-gray-800 shadow-md border border-gray-100 dark:border-gray-700 transition-all duration-300">
@@ -75,11 +75,4 @@ function AuthContent({ user }: ServerAuthInfoProps) {
       <AuthButtons user={null} />
     </div>
   );
-}
-
-// Server component
-export async function ServerAuthInfo() {
-  const user = await getServerUser();
-
-  return <AuthContent user={user} />;
 }

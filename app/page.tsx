@@ -1,5 +1,7 @@
 import Image from "next/image";
 import { ServerAuthInfo } from "@/components/auth/ServerAuthInfo";
+import { ServerNotes } from "@/components/notes/ServerNotes";
+import { getServerUser } from "@/lib/firebase/auth-server";
 import { Metadata } from "next";
 import { CheckCircleIcon } from "@heroicons/react/20/solid";
 import GitHubIcon from "@/components/icons/GitHubIcon";
@@ -83,7 +85,14 @@ const jsonLd = {
   ],
 };
 
-export default function Home() {
+export default async function Home() {
+  // Resolved once and passed to both cards below: `getServerUser` checks
+  // revocation against Firebase on every call, not a local JWT decode, so
+  // letting each card fetch its own would double that round trip - and both
+  // cards would risk disagreeing about who is signed in if one call failed
+  // and the other didn't.
+  const user = await getServerUser();
+
   return (
     <>
       <script
@@ -139,7 +148,7 @@ export default function Home() {
             </p>
 
             <div className="flex justify-center">
-              <ServerAuthInfo />
+              <ServerAuthInfo user={user} />
             </div>
           </div>
 
@@ -198,7 +207,25 @@ export default function Home() {
                 <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
                 Notification System
               </li>
+              <li className="flex items-center">
+                <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
+                Firestore (server-side, per-user)
+              </li>
             </ul>
+          </div>
+        </div>
+
+        <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 mb-12 border border-gray-100 dark:border-gray-700 transform transition-all hover:shadow-xl">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
+              Firestore Demo
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Notes are stored per-user and reached only through the Admin
+              SDK on the server.
+            </p>
+
+            <ServerNotes user={user} />
           </div>
         </div>
       </main>
