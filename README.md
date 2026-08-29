@@ -22,6 +22,7 @@ Next.js 16 + Firebase boilerplate with server-side authentication and per-user F
 - ✅ Responsive Design
 - ✅ Notification System
 - ✅ Firestore (server-side, per-user)
+- ✅ Vercel Analytics
 - ✅ Tested with Vitest, verified in CI
 
 ## Demo
@@ -72,7 +73,9 @@ This step is required, not optional. A signed-out visitor never touches Firestor
 
 1. In your Firebase project settings, go to "General"
 2. Under "Your apps", click the web app (create one if needed)
-3. Copy the Firebase configuration object for the `NEXT_PUBLIC_FIREBASE_WEB_SDK_CONFIG` environment variable
+3. Copy the values into `NEXT_PUBLIC_FIREBASE_WEB_SDK_CONFIG`, as JSON
+
+The console shows a JavaScript snippet (`const firebaseConfig = { apiKey: ... }`) with unquoted keys. The variable is read with `JSON.parse`, so copy only the object, quote every key, and drop the `const` and any trailing comma - `.env.local.example` shows the exact shape.
 
 ### Environment Variables
 
@@ -88,7 +91,7 @@ cp .env.local.example .env.local
 | `NEXT_PUBLIC_FIREBASE_WEB_SDK_CONFIG` | yes | Web app config from Step 5, used by the browser SDK |
 | `SITE_URL` | no | Public URL of the deployment, used for metadata, `robots.txt` and the sitemap. Falls back to the Vercel production domain, then `http://localhost:3000` |
 
-> **IMPORTANT**: both JSON values must be on a **single line**, with no line breaks - the `private_key` field in particular. Line breaks inside the JSON cause authentication errors.
+> **IMPORTANT**: both values must be a **single physical line** of JSON. This is not the same as removing every `\n`: `private_key` legitimately contains `\n` escape sequences inside its string, and they must survive. A real line break in the file is what breaks parsing. `jq -c . service-account.json` produces the right shape from a downloaded key file.
 
 ## Installation
 
@@ -187,7 +190,7 @@ The auth routes assume a hostile caller:
 - **Same-origin only** - the state-changing routes (sign-in, sign-out, delete) reject requests whose `Origin` does not match the deployment; sign-in and deletion additionally require a JSON content type, so a cross-site form cannot sign a victim into an attacker's account.
 - **Fresh tokens only** - a session cookie is minted only from an ID token whose sign-in happened in the last 5 minutes, so a leaked ID token cannot be traded for a two-week session. Re-minting is exempt when the browser already holds a valid session for the same user, which is what the anonymous -> Google upgrade does: it grants no access the caller does not already have.
 - **Sign-out revokes everywhere** - signing out calls `revokeRefreshTokens`, which invalidates every session of that user on every device. Firebase cannot revoke a single session cookie, so a copied cookie would otherwise stay valid; if revocation fails the API reports it instead of claiming success.
-- **Deletion needs re-authentication** - deleting an account requires a confirmation and a freshly minted ID token (a Google popup re-auth for permanent accounts), because Admin-side deletion bypasses Firebase's own `requires-recent-login` rule. It also removes that user's notes - see [Per-User Firestore Data](#per-user-firestore-data).
+- **Deletion needs re-authentication** - deleting an account requires a confirmation and a freshly minted ID token (a Google popup re-auth for permanent accounts), because Admin-side deletion bypasses Firebase's own `requires-recent-login` rule. It also attempts to remove that user's notes - see [Per-User Firestore Data](#per-user-firestore-data) for what happens when that does not finish.
 
 `GET /api/auth/user` is included as a worked example of a protected route handler; the UI itself reads the user on the server.
 
@@ -207,7 +210,7 @@ A contextual notification system to display success/error messages to users.
 
 Notes live at `users/{uid}/notes`. `userNotes(uid)` will build a path for whatever uid it is handed, so the layout itself enforces nothing - ownership rests entirely on every caller passing the uid resolved from the verified session cookie, never one taken from a request body or a path segment. The server component reads the collection directly with the Admin SDK; the route handler at `app/api/notes/route.ts` writes to it behind `rejectCrossSiteRequest`, the same guard the auth routes use. The client component never imports `firebase/firestore` - it only calls that API route.
 
-Deleting an account deletes the Auth user first, then sweeps that user's notes; if the sweep fails it is reported instead of hidden behind a success, and the browser is signed out and warned rather than left holding a session for an account that is gone. This can still leave notes behind: a write already past session verification when the account was deleted, or a `recursiveDelete` that fails part-way through, can leave notes under a uid nobody can authenticate as again. This boilerplate does not clean those up - a production app's usual first step is a Cloud Functions `onDelete` trigger on the auth user (or a scheduled job), but that only narrows the window: it can race the same late write, so it is best-effort, not a guarantee. Guaranteed eventual cleanup needs a durable deletion marker plus a retry or reaper process.
+Deleting an account deletes the Auth user first, then sweeps that user's notes; if the sweep fails it is reported instead of hidden behind a success, and the browser is warned and signed out rather than left holding a session for an account that is gone - the server cookie is cleared, and the client SDK sign-out is attempted, with a failure there logged rather than hidden. This can still leave notes behind: a write already past session verification when the account was deleted, or a `recursiveDelete` that fails part-way through, can leave notes under a uid nobody can authenticate as again. This boilerplate does not clean those up - a production app's usual first step is a Cloud Functions `onDelete` trigger on the auth user (or a scheduled job), but that only narrows the window: it can race the same late write, so it is best-effort, not a guarantee. Guaranteed eventual cleanup needs a durable deletion marker plus a retry or reaper process.
 
 Each note's text is capped at 200 characters, trimmed, and rejected outside that range. The number of notes is not capped, and the read is unbounded, so a user's own page grows with their own note count. Nothing here caps or paginates that; a production app would do one or the other.
 
@@ -221,9 +224,13 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Set `FIREBASE_ADMIN_SERVICE_ACCOUNT` and `NEXT_PUBLIC_FIREBASE_WEB_SDK_CONFIG` in the project's environment variables. `SITE_URL` is optional on Vercel: the production domain is picked up automatically.
 
-Add every domain the app is **served from** to Authentication > Settings > Authorized domains in the Firebase console - the deployment's `.vercel.app` domain, any custom domain, and `localhost` for local development. This is the domain in the browser's address bar, not the project's `authDomain`. Google sign-in, account upgrade and account deletion all open a popup, and an unlisted domain fails every one of them with `auth/unauthorized-domain`.
+Add every domain the app is **served from** to Authentication > Settings > Authorized domains in the Firebase console - the deployment's `.vercel.app` domain, any custom domain, and `localhost` for local development. This is the domain in the browser's address bar, not the project's `authDomain`. Google sign-in, account upgrade and deletion of a Google account all open a popup, and an unlisted domain fails every one of them with `auth/unauthorized-domain`. (Deleting an anonymous account re-authenticates with a fresh ID token instead, so it opens no popup.)
 
-If you forked this repository, delete `public/google*.html` - it verifies the original author's Search Console property, not yours.
+If you forked this repository:
+
+- Delete `public/google*.html` - it verifies the original author's Search Console property, not yours.
+- Supply a Terms of Service and a Privacy Policy, or drop the line promising them. `components/modals/AuthModal.tsx` tells everyone who signs in that they agree to both, and this repository ships neither.
+- Note that social preview images are rendered by `https://dogimg.vercel.app`, an external service this repo does not control (`lib/site.ts`). Point `SITE_OG_IMAGE` at your own asset if you would rather not depend on it.
 
 Check out the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 

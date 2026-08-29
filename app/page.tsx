@@ -128,7 +128,7 @@ export default async function Home() {
             Next.js + Firebase Boilerplate
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300">
-            Firebase auth and Firestore, handled on the server
+            Server-verified sessions and per-user Firestore data
           </p>
         </div>
 
@@ -189,6 +189,10 @@ export default async function Home() {
               <li className="flex items-center">
                 <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
                 Firestore (server-side, per-user)
+              </li>
+              <li className="flex items-center">
+                <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
+                Vercel Analytics
               </li>
               <li className="flex items-center">
                 <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
