@@ -1,0 +1,16 @@
+// IMPORTANT: All client read and write operations are denied by default.
+//
+// The Admin SDK bypasses these rules by design—this is intentional and why the
+// server-side app (which uses the Admin SDK) continues to work despite this
+// deny-all policy. These rules do NOT protect the server; they only constrain
+// the client. The moment anyone adds client-side Firestore access, this file
+// becomes the ONLY defense between user data and the internet.
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
