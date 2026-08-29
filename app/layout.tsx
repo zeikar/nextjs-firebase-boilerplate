@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     template: "%s | Next.js Firebase Boilerplate",
   },
   description:
-    "Production-ready Next.js 16 + Firebase boilerplate with built-in authentication, server-side rendering, and TypeScript support for rapid application development",
+    "Next.js 16 + Firebase boilerplate with server-side authentication and per-user Firestore data, both reached through the Admin SDK",
   authors: [{ name: "zeikar", url: "https://github.com/zeikar" }],
   creator: "zeikar",
   openGraph: {

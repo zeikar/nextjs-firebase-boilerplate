@@ -2,7 +2,7 @@
 
 ![Next.js + Firebase](https://nextjs-firebase-starter.vercel.app/repository-open-graph-template.png)
 
-Production-ready Next.js 16 + Firebase boilerplate with built-in authentication, server-side rendering, and TypeScript support for rapid application development. Launch secure, scalable web applications in minutes, not days.
+Next.js 16 + Firebase boilerplate with server-side authentication and per-user Firestore data, both reached through the Admin SDK. Sign-in exchanges an ID token for an httpOnly session cookie the server verifies; the client never touches Firestore.
 
 ## Features
 

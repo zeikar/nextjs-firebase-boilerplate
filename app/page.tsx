@@ -14,23 +14,23 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: { absolute: "Next.js 16 + Firebase Boilerplate" },
   description:
-    "Production-ready Next.js 16 + Firebase boilerplate with built-in authentication, server-side rendering, and TypeScript support for rapid application development",
+    "Next.js 16 + Firebase boilerplate with server-side authentication and per-user Firestore data, both reached through the Admin SDK",
   keywords: [
     "next.js",
     "next.js 16",
     "firebase",
-    "authentication",
+    "firebase auth",
+    "firestore",
+    "server-side auth",
+    "session cookies",
     "boilerplate",
     "react",
     "typescript",
-    "rapid development",
-    "production-ready",
-    "developer-friendly",
   ],
   openGraph: {
     title: "Next.js 16 + Firebase Boilerplate",
     description:
-      "Production-ready Next.js 16 + Firebase boilerplate with built-in authentication",
+      "Next.js 16 + Firebase boilerplate with server-side authentication and per-user Firestore data",
     url: `${SITE_URL}/`,
     siteName: "Next.js Firebase Boilerplate",
     images: [
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Next.js 16 + Firebase Boilerplate",
     description:
-      "Production-ready Next.js 16 + Firebase boilerplate with built-in authentication",
+      "Next.js 16 + Firebase boilerplate with server-side authentication and per-user Firestore data",
     images: [SITE_OG_IMAGE],
   },
 };
@@ -62,13 +62,13 @@ const jsonLd = {
       url: `${SITE_URL}/`,
       name: "Next.js 16 + Firebase Boilerplate",
       description:
-        "Production-ready Next.js 16 + Firebase boilerplate with built-in authentication, server-side rendering, and TypeScript support",
+        "Next.js 16 + Firebase boilerplate with server-side authentication and per-user Firestore data, both reached through the Admin SDK",
     },
     {
       "@type": "SoftwareSourceCode",
       name: "Next.js 16 + Firebase Boilerplate",
       description:
-        "Production-ready Next.js 16 + Firebase boilerplate with built-in authentication, server-side rendering, and TypeScript support for rapid application development",
+        "Next.js 16 + Firebase boilerplate with server-side authentication and per-user Firestore data, both reached through the Admin SDK",
       url: "https://github.com/zeikar/nextjs-firebase-boilerplate",
       codeRepository: "https://github.com/zeikar/nextjs-firebase-boilerplate",
       programmingLanguage: ["TypeScript", "JavaScript"],
@@ -128,7 +128,7 @@ export default async function Home() {
             Next.js + Firebase Boilerplate
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300">
-            Launch secure, scalable web applications in minutes, not days
+            Firebase auth and Firestore, handled on the server
           </p>
         </div>
 
