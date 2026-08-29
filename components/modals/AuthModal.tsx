@@ -1,9 +1,16 @@
 "use client";
 
-import { Fragment, useRef } from "react";
-import { Dialog, Transition } from "@headlessui/react";
+import { Fragment } from "react";
+import {
+  Dialog,
+  DialogPanel,
+  DialogTitle,
+  Transition,
+  TransitionChild,
+} from "@headlessui/react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { useFirebaseAuth, AuthProvider } from "@/lib/firebase/useFirebaseAuth";
+import type { AuthOperation } from "@/lib/firebase/useFirebaseAuth";
+import { useAuth } from "@/contexts/auth-context";
 import Loading from "../icons/Loading";
 import GoogleIcon from "../icons/GoogleIcon";
 import UserIcon from "../icons/UserIcon";
@@ -14,8 +21,8 @@ interface AuthModalProps {
 }
 
 interface AuthButtonProps {
-  provider: AuthProvider;
-  loadingProvider: AuthProvider;
+  provider: AuthOperation;
+  loadingProvider: AuthOperation;
   isAuthLoading: boolean;
   onClick: () => Promise<void>;
   icon: React.ReactNode;
@@ -57,9 +64,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     isAuthLoading,
     signInWithGoogle,
     signInAnonymously,
-  } = useFirebaseAuth();
-  const cancelButtonRef = useRef(null);
-
+  } = useAuth();
   const handleGoogleSignIn = async () => {
     const result = await signInWithGoogle();
     if (result.success) {
@@ -75,28 +80,23 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   };
 
   return (
-    <Transition.Root show={isOpen} as={Fragment}>
-      <Dialog
-        as="div"
-        className="relative z-10"
-        initialFocus={cancelButtonRef}
-        onClose={onClose}
-      >
-        <Transition.Child
+    <Transition show={isOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-10" onClose={onClose}>
+        <TransitionChild
           as={Fragment}
           enter="ease-out duration-300"
           enterFrom="opacity-0"
-          enterTo="opacity-75"
+          enterTo="opacity-100"
           leave="ease-in duration-200"
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-gray-500 opacity-75 transition-opacity dark:bg-gray-900 dark:opacity-80" />
-        </Transition.Child>
+          <div className="fixed inset-0 bg-gray-500/75 transition-opacity dark:bg-gray-900/80" />
+        </TransitionChild>
 
         <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
           <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-            <Transition.Child
+            <TransitionChild
               as={Fragment}
               enter="ease-out duration-300"
               enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
@@ -105,7 +105,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-md">
+              <DialogPanel className="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-md">
                 <div className="absolute right-0 top-0 pr-4 pt-4 block">
                   <button
                     type="button"
@@ -120,12 +120,12 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 <div className="px-4 pb-4 pt-5 sm:p-8">
                   <div className="sm:flex sm:items-start">
                     <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                      <Dialog.Title
+                      <DialogTitle
                         as="h3"
                         className="text-xl font-semibold leading-6 text-gray-900 dark:text-gray-100 text-center mb-6"
                       >
                         Sign In Options
-                      </Dialog.Title>
+                      </DialogTitle>
 
                       <div className="mt-4 space-y-4">
                         <AuthButton
@@ -156,11 +156,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     </div>
                   </div>
                 </div>
-              </Dialog.Panel>
-            </Transition.Child>
+              </DialogPanel>
+            </TransitionChild>
           </div>
         </div>
       </Dialog>
-    </Transition.Root>
+    </Transition>
   );
 }

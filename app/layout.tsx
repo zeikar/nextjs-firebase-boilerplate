@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import { NotificationProvider } from "@/contexts/notification-context";
+import { AuthProvider } from "@/contexts/auth-context";
+import { SITE_OG_IMAGE, SITE_URL } from "@/lib/site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://nextjs-firebase-starter.vercel.app"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Next.js 16 + Firebase Boilerplate",
     template: "%s | Next.js Firebase Boilerplate",
@@ -30,7 +32,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "https://dogimg.vercel.app/api/og?url=https://nextjs-firebase-starter.vercel.app/",
+        url: SITE_OG_IMAGE,
         width: 1200,
         height: 630,
         alt: "Next.js 16 + Firebase Boilerplate",
@@ -39,9 +41,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    images: [
-      "https://dogimg.vercel.app/api/og?url=https://nextjs-firebase-starter.vercel.app/",
-    ],
+    images: [SITE_OG_IMAGE],
   },
 };
 
@@ -55,7 +55,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <NotificationProvider>{children}</NotificationProvider>
+        <NotificationProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </NotificationProvider>
         <Analytics />
       </body>
     </html>

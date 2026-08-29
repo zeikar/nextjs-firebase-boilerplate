@@ -7,7 +7,7 @@ import {
   signInAnonymously as firebaseSignInAnonymously,
   UserCredential,
   linkWithPopup as firebaseLinkWithPopup,
-  deleteUser as firebaseDeleteUser,
+  reauthenticateWithPopup,
 } from "firebase/auth";
 import { auth, googleProvider } from "./client";
 import { useRouter } from "next/navigation";
@@ -18,11 +18,12 @@ import {
   deleteUserAccount,
 } from "./authService";
 import { useFirebaseErrorHandler } from "../utils/useFirebaseErrorHandler";
+import { getErrorMessage } from "../utils/firebaseErrors";
 
 /**
- * Auth provider types for loading state management
+ * The auth operations that can be in flight, for loading state management
  */
-export type AuthProvider =
+export type AuthOperation =
   | "google"
   | "anonymous"
   | "signout"
@@ -30,10 +31,20 @@ export type AuthProvider =
   | "delete"
   | null;
 
+/**
+ * The app's auth operations and their shared loading state.
+ * Instantiate it once through `AuthProvider`; components read it with
+ * `useAuth()` so a running operation blocks the others.
+ */
 export function useFirebaseAuth() {
   const router = useRouter();
-  const [loadingProvider, setLoadingProvider] = useState<AuthProvider>(null);
-  const { showFirebaseError, showSuccessMessage } = useFirebaseErrorHandler();
+  const [loadingProvider, setLoadingProvider] = useState<AuthOperation>(null);
+  const {
+    showFirebaseError,
+    showErrorMessage,
+    showSuccessMessage,
+    showWarningMessage,
+  } = useFirebaseErrorHandler();
 
   /**
    * Handles the common authentication flow with the server
@@ -41,7 +52,7 @@ export function useFirebaseAuth() {
   const processServerAuth = async (
     credentialPromise: Promise<UserCredential>,
     operation: string,
-    provider: AuthProvider
+    provider: AuthOperation
   ): Promise<AuthResult> => {
     try {
       setLoadingProvider(provider);
@@ -53,18 +64,26 @@ export function useFirebaseAuth() {
       // Send ID token to server to set session cookie
       const authResult = await sendTokenToServer(idToken);
 
-      if (authResult.success) {
-        router.refresh();
-        showSuccessMessage("Successfully signed in.");
+      if (!authResult.success) {
+        // The server holds no session for this sign-in, so the client must not
+        // keep one either - otherwise the two disagree about who is signed in.
+        await firebaseSignOut(auth);
+        showErrorMessage(
+          authResult.error || `An error occurred during ${operation}.`
+        );
+        return authResult;
       }
 
+      router.refresh();
+      showSuccessMessage("Successfully signed in.");
+
       return authResult;
-    } catch (error: any) {
+    } catch (error) {
       console.error(`${operation} error:`, error);
       showFirebaseError(error, `An error occurred during ${operation}.`);
       return {
         success: false,
-        error: error.message || `An error occurred during ${operation}.`,
+        error: getErrorMessage(error, `An error occurred during ${operation}.`),
       };
     } finally {
       setLoadingProvider(null);
@@ -100,25 +119,46 @@ export function useFirebaseAuth() {
     try {
       setLoadingProvider("signout");
 
-      // Sign out from Firebase client
-      await firebaseSignOut(auth);
+      // Both sides are cleared independently: if one fails the other still has
+      // to happen, or client and server disagree about who is signed in.
+      const [clientOutcome, sessionOutcome] = await Promise.allSettled([
+        firebaseSignOut(auth),
+        deleteSession(),
+      ]);
 
-      // Delete server session
-      const sessionResult = await deleteSession();
+      // The server session is gone or unusable either way, so the
+      // server-rendered page has to be refreshed.
+      router.refresh();
 
-      if (sessionResult.success) {
-        router.refresh();
-        showSuccessMessage("Successfully signed out.");
+      if (clientOutcome.status === "rejected") {
+        const error = clientOutcome.reason;
+        console.error("Sign out error:", error);
+        showFirebaseError(error, "An error occurred while signing out.");
+        return {
+          success: false,
+          error: getErrorMessage(error, "An error occurred during sign out."),
+        };
       }
 
+      const sessionResult =
+        sessionOutcome.status === "fulfilled"
+          ? sessionOutcome.value
+          : {
+              success: false,
+              error: "An error occurred during sign out.",
+            };
+
+      if (!sessionResult.success) {
+        // Signed out here, but the session may still be alive elsewhere.
+        showWarningMessage(
+          sessionResult.error || "The server session could not be revoked."
+        );
+        return sessionResult;
+      }
+
+      showSuccessMessage("Successfully signed out.");
+
       return sessionResult;
-    } catch (error: any) {
-      console.error("Sign out error:", error);
-      showFirebaseError(error, "An error occurred while signing out.");
-      return {
-        success: false,
-        error: error.message || "An error occurred during sign out.",
-      };
     } finally {
       setLoadingProvider(null);
     }
@@ -146,18 +186,28 @@ export function useFirebaseAuth() {
       // Send new token to server to update session
       const authResult = await sendTokenToServer(idToken);
 
+      // The account is linked at this point whatever the server answers, and
+      // the existing session cookie still covers the same uid.
+      router.refresh();
+
       if (authResult.success) {
-        router.refresh();
         showSuccessMessage("Account successfully linked.");
+      } else {
+        showWarningMessage(
+          authResult.error || "Account linked, but the session was not updated."
+        );
       }
 
       return authResult;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Account linking error:", error);
       showFirebaseError(error, "An error occurred while linking account.");
       return {
         success: false,
-        error: error.message || "An error occurred while upgrading account.",
+        error: getErrorMessage(
+          error,
+          "An error occurred while upgrading account."
+        ),
       };
     } finally {
       setLoadingProvider(null);
@@ -166,17 +216,26 @@ export function useFirebaseAuth() {
 
   /**
    * Delete user account - both on client and server
-   * Uses a two-step process:
-   * 1. Call server to verify session and delete user on server
-   * 2. Then try to delete on client if needed
+   * Server-side deletion bypasses Firebase's `requires-recent-login` rule, so
+   * the user re-authenticates first and the fresh ID token is sent as proof.
    */
   const deleteAccount = async (): Promise<AuthResult> => {
     try {
       setLoadingProvider("delete");
 
-      // First, call the server to delete the account
-      // This ensures we have a valid session and deletes the user on the server
-      const serverResult = await deleteUserAccount();
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error("No authenticated user found");
+      }
+
+      // Anonymous users have no credential to re-authenticate with; their live
+      // ID token is the strongest proof available.
+      if (!currentUser.isAnonymous) {
+        await reauthenticateWithPopup(currentUser, googleProvider);
+      }
+      const idToken = await currentUser.getIdToken(true);
+
+      const serverResult = await deleteUserAccount(idToken);
 
       if (!serverResult.success) {
         throw new Error(
@@ -184,29 +243,23 @@ export function useFirebaseAuth() {
         );
       }
 
-      try {
-        // Try to delete client-side user as well, if it exists
-        // This might fail if server already deleted user, which is fine
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          await firebaseDeleteUser(currentUser);
-        }
-      } catch (clientError) {
-        // Ignore client-side errors as server already deleted the account
-        console.log("Client-side deletion not needed or failed:", clientError);
-      }
+      // The account no longer exists, so drop the client session as well.
+      await firebaseSignOut(auth);
 
       // Refresh the page to reflect changes
       router.refresh();
       showSuccessMessage("Account successfully deleted.");
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error) {
       console.error("Account deletion error:", error);
       showFirebaseError(error, "An error occurred while deleting account.");
       return {
         success: false,
-        error: error.message || "An error occurred while deleting account.",
+        error: getErrorMessage(
+          error,
+          "An error occurred while deleting account."
+        ),
       };
     } finally {
       setLoadingProvider(null);

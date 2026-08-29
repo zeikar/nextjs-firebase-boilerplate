@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useFirebaseAuth } from "@/lib/firebase/useFirebaseAuth";
-import { ServerUser } from "@/lib/firebase/auth-server";
+import { useAuth } from "@/contexts/auth-context";
+import type { ServerUser } from "@/lib/firebase/auth-server";
 import Loading from "../icons/Loading";
 import AuthModal from "../modals/AuthModal";
 import { ArrowRightEndOnRectangleIcon } from "@heroicons/react/24/outline";
@@ -12,7 +12,7 @@ type AuthButtonsProps = {
 };
 
 export default function AuthButtons({ user }: AuthButtonsProps) {
-  const { loadingProvider, isAuthLoading, signOut } = useFirebaseAuth();
+  const { loadingProvider, isAuthLoading, signOut } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleSignOut = async () => {
@@ -30,7 +30,7 @@ export default function AuthButtons({ user }: AuthButtonsProps) {
   if (user) {
     return (
       <button
-        className="rounded-lg bg-rose-100 text-rose-800 hover:bg-rose-200 px-5 py-2 text-sm font-medium transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-rose-300 focus:ring-opacity-50 disabled:opacity-70"
+        className="rounded-lg bg-rose-100 text-rose-800 hover:bg-rose-200 px-5 py-2 text-sm font-medium transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-rose-300/50 disabled:opacity-70"
         onClick={handleSignOut}
         disabled={isAuthLoading}
       >
@@ -50,7 +50,7 @@ export default function AuthButtons({ user }: AuthButtonsProps) {
   return (
     <>
       <button
-        className="rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 px-5 py-2 text-sm font-medium transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-opacity-50 disabled:opacity-70"
+        className="rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 px-5 py-2 text-sm font-medium transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-300/50 disabled:opacity-70"
         onClick={handleOpenModal}
         disabled={isAuthLoading}
       >

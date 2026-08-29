@@ -4,6 +4,8 @@
  * Authentication service for handling API requests to the server
  */
 
+import { getErrorMessage } from "../utils/firebaseErrors";
+
 export interface AuthResult {
   success: boolean;
   error?: string;
@@ -31,11 +33,14 @@ export const sendTokenToServer = async (
     }
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Server authentication error:", error);
     return {
       success: false,
-      error: error.message || "An error occurred during server authentication.",
+      error: getErrorMessage(
+        error,
+        "An error occurred during server authentication."
+      ),
     };
   }
 };
@@ -56,22 +61,29 @@ export const deleteSession = async (): Promise<AuthResult> => {
     }
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Session deletion error:", error);
     return {
       success: false,
-      error: error.message || "An error occurred while signing out.",
+      error: getErrorMessage(error, "An error occurred while signing out."),
     };
   }
 };
 
 /**
- * Sends a request to delete the user account (both client and server)
+ * Sends a request to delete the user account (both client and server).
+ * The ID token proves the caller still holds the account credential.
  */
-export const deleteUserAccount = async (): Promise<AuthResult> => {
+export const deleteUserAccount = async (
+  idToken: string
+): Promise<AuthResult> => {
   try {
     const response = await fetch("/api/auth/user", {
       method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ idToken }),
     });
 
     const data = await response.json();
@@ -81,11 +93,11 @@ export const deleteUserAccount = async (): Promise<AuthResult> => {
     }
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Account deletion error:", error);
     return {
       success: false,
-      error: error.message || "An error occurred while deleting account.",
+      error: getErrorMessage(error, "An error occurred while deleting account."),
     };
   }
 };
