@@ -22,6 +22,7 @@ Production-ready Next.js 16 + Firebase boilerplate with built-in authentication,
 - ✅ SEO Optimized
 - ✅ Responsive Design
 - ✅ Notification System
+- ✅ Tested with Vitest, verified in CI
 
 ## Demo
 
@@ -112,7 +113,7 @@ bun dev
 
 4. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-Other scripts: `npm run lint` (ESLint), `npm run build` (production build), `npm start` (serve the build).
+Other scripts: `npm test` (run the test suite), `npm run test:watch` (re-run on change), `npm run test:coverage` (coverage report), `npm run lint` (ESLint), `npm run build` (production build), `npm start` (serve the build).
 
 ## Project Structure
 
@@ -148,6 +149,11 @@ lib/
     useFirebaseErrorHandler.ts
   site.ts                  - Public site URL
 public/                    - Static files
+__tests__/
+  helpers/                 - Shared test doubles
+  lib/                     - Origin guard, session rules, error mapping
+  api/                     - Auth routes, with the Admin SDK mocked
+.github/workflows/         - Lint, test and build on push and PR
 ```
 
 ## Key Features

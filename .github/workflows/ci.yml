@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm test
+
+      # `next build` loads the Firebase modules, and both refuse to initialize
+      # without credentials - the Admin SDK parses the private key as it starts.
+      # A throwaway key generated here keeps the build runnable on every fork
+      # without a repository secret; nothing ever authenticates with it.
+      - name: Generate placeholder Firebase credentials
+        run: |
+          openssl genrsa -out "$RUNNER_TEMP/ci.pem" 2048
+          node -e '
+            const fs = require("node:fs");
+            const serviceAccount = {
+              type: "service_account",
+              project_id: "ci-placeholder",
+              private_key_id: "ci",
+              private_key: fs.readFileSync(`${process.env.RUNNER_TEMP}/ci.pem`, "utf8"),
+              client_email: "ci@ci-placeholder.iam.gserviceaccount.com",
+              client_id: "0",
+              auth_uri: "https://accounts.google.com/o/oauth2/auth",
+              token_uri: "https://oauth2.googleapis.com/token",
+              auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+              client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/ci",
+              universe_domain: "googleapis.com",
+            };
+            fs.appendFileSync(
+              process.env.GITHUB_ENV,
+              `FIREBASE_ADMIN_SERVICE_ACCOUNT=${JSON.stringify(serviceAccount)}\n`
+            );
+          '
+
+      - name: Build
+        env:
+          NEXT_PUBLIC_FIREBASE_WEB_SDK_CONFIG: >-
+            {"apiKey":"ci-placeholder","authDomain":"ci-placeholder.firebaseapp.com","projectId":"ci-placeholder","storageBucket":"ci-placeholder.firebasestorage.app","messagingSenderId":"0","appId":"0"}
+        run: npm run build
