@@ -26,6 +26,11 @@
     "react-dom": "19.2.4",
     "server-only": "^0.0.1"
   },
+  "overrides": {
+    "@google-cloud/storage": {
+      "uuid": "^11.1.1"
+    }
+  },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24.1.0",
