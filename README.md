@@ -33,7 +33,7 @@ Production-ready Next.js 16 + Firebase boilerplate with built-in authentication,
 
 ### Prerequisites
 
-- Node.js 24 or later (`engines` asks for `>=24.0.0`, so Vercel deploys on 24.x). firebase-admin 14 pulls jwks-rsa, which requires jose from CommonJS, so anything below Node 20.19 / 22.12 fails to load the Admin SDK at all.
+- Node.js 24 or later. `engines` asks for `>=24.0.0`, so Vercel deploys on 24.x. The floor is not cosmetic: firebase-admin 14 reaches `jose` through `jwks-rsa`'s CommonJS `require`, and a Node old enough to refuse that fails to load the Admin SDK at all.
 - Firebase account with a project created
 - Firebase Admin SDK credentials
 
@@ -53,11 +53,15 @@ Production-ready Next.js 16 + Firebase boilerplate with built-in authentication,
 
 ### Step 3: Create the Firestore Database
 
-1. In your Firebase project console, go to "Firestore Database"
+1. In your Firebase project console, go to "Databases & Storage" > "Firestore"
 2. Click "Create database"
-3. Start in production mode and pick a location
+3. Choose "Standard edition", then "Next"
+4. Enter a Database ID (the default is fine), pick a location, then "Next"
+5. Start in **production mode**, then "Create"
 
-This step is required: without it, the home page fails outright instead of hiding the misconfiguration. A missing database raises `NOT_FOUND`, which is deliberately outside the transient-error allow-list, so it surfaces rather than sitting behind a soothing message - and with no error boundary around the notes section, it takes the whole page with it.
+Production mode denies every read and write from web and mobile clients while still allowing authenticated application servers - which is exactly this boilerplate's shape, and what `firestore.rules` here already encodes.
+
+This step is required, not optional: without a database the home page fails outright rather than hiding the misconfiguration. See [Per-User Firestore Data](#per-user-firestore-data) for why it fails loudly by design.
 
 ### Step 4: Generate Admin SDK Credentials
 
@@ -204,7 +208,11 @@ A contextual notification system to display success/error messages to users.
 
 Notes live at `users/{uid}/notes`. `userNotes(uid)` will build a path for whatever uid it is handed, so the layout itself enforces nothing - ownership rests entirely on every caller passing the uid resolved from the verified session cookie, never one taken from a request body or a path segment. The server component reads the collection directly with the Admin SDK; the route handler at `app/api/notes/route.ts` writes to it behind `rejectCrossSiteRequest`, the same guard the auth routes use. The client component never imports `firebase/firestore` - it only calls that API route.
 
-Deleting an account deletes the Auth user first, then sweeps that user's notes; if the sweep fails it is reported instead of hidden behind a success, and the browser is signed out and warned rather than left holding a session for an account that is gone. This can still leave notes behind: a write already past session verification when the account was deleted, or a `recursiveDelete` that fails part-way through, can leave notes under a uid nobody can authenticate as again. This boilerplate does not clean those up - a production app's usual first step is a Cloud Functions `onDelete` trigger on the auth user (or a scheduled job), but that only narrows the window: it can race the same late write, so it is best-effort, not a guarantee. Guaranteed eventual cleanup needs a durable deletion marker plus a retry or reaper process. Reads here are also unbounded and note creation uncapped, so a user's own page grows with their own note count; a production app would cap or paginate.
+Deleting an account deletes the Auth user first, then sweeps that user's notes; if the sweep fails it is reported instead of hidden behind a success, and the browser is signed out and warned rather than left holding a session for an account that is gone. This can still leave notes behind: a write already past session verification when the account was deleted, or a `recursiveDelete` that fails part-way through, can leave notes under a uid nobody can authenticate as again. This boilerplate does not clean those up - a production app's usual first step is a Cloud Functions `onDelete` trigger on the auth user (or a scheduled job), but that only narrows the window: it can race the same late write, so it is best-effort, not a guarantee. Guaranteed eventual cleanup needs a durable deletion marker plus a retry or reaper process.
+
+Reads are unbounded and note creation uncapped, so a user's own page grows with their own note count. Nothing here caps or paginates; a production app would do one or the other.
+
+Firestore failures are sorted rather than swallowed. Only an allow-list of transient gRPC statuses - unavailable, deadline exceeded, resource exhausted, internal - renders an "unavailable" line in place of the panel, so a blip costs this section and not the authentication card beside it. Everything else is rethrown: a missing database (`NOT_FOUND`), a service account that cannot reach the data, and any mistake in the mapping are configuration or programming faults, and there is no error boundary around the section, so they take the whole page down where you cannot miss them. That is deliberate - a setup error that renders as a permanent soothing message is worse than one that fails loudly.
 
 `firestore.rules` denies every client read and write. The Admin SDK bypasses these rules by design, so they do not protect any server code, including this app's own route handlers and server components - they only constrain the client. The moment anyone adds client-side Firestore access, this file becomes the only defense between that data and the internet. This repo ships no `firebase.json` or other CLI project files, so the rules are not deployed just by existing in the repo: paste `firestore.rules` into the Rules tab of the Firebase console, or run `firebase deploy --only firestore:rules` if you set up the Firebase CLI yourself.
 
